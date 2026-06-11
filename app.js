@@ -13,6 +13,48 @@ nav?.querySelectorAll('a').forEach((link) => {
   });
 });
 
+const copyButton = document.querySelector('.ca-copy');
+
+function fallbackCopyText(text) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.setAttribute('readonly', '');
+  textArea.style.position = 'fixed';
+  textArea.style.opacity = '0';
+  document.body.appendChild(textArea);
+  textArea.select();
+  document.execCommand('copy');
+  textArea.remove();
+}
+
+copyButton?.addEventListener('click', async () => {
+  const ca = copyButton.dataset.copy;
+  const status = copyButton.querySelector('.copy-status');
+  if (!ca) return;
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(ca);
+    } else {
+      fallbackCopyText(ca);
+    }
+    copyButton.classList.add('copied');
+    if (status) status.textContent = 'Copied';
+    window.setTimeout(() => {
+      copyButton.classList.remove('copied');
+      if (status) status.textContent = 'Click to copy';
+    }, 1800);
+  } catch (error) {
+    fallbackCopyText(ca);
+    copyButton.classList.add('copied');
+    if (status) status.textContent = 'Copied';
+    window.setTimeout(() => {
+      copyButton.classList.remove('copied');
+      if (status) status.textContent = 'Click to copy';
+    }, 1800);
+  }
+});
+
 const countdownTarget = new Date();
 countdownTarget.setHours(countdownTarget.getHours() + 14);
 countdownTarget.setMinutes(countdownTarget.getMinutes() + 11);
