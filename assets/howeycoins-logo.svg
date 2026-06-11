@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 150" role="img" aria-labelledby="title desc">
+  <title id="title">HoweyCoins</title>
+  <desc id="desc">A blue futuristic HOWEYCOINS wordmark with an orange segmented coin ring replacing the O in COINS.</desc>
+  <defs>
+    <style>
+      .blue {
+        fill: none;
+        stroke: #064b80;
+        stroke-width: 13;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .orange {
+        fill: none;
+        stroke: #d94a1c;
+        stroke-width: 9;
+        stroke-linecap: butt;
+      }
+      .orange-thin {
+        fill: none;
+        stroke: #ef6a2f;
+        stroke-width: 4.5;
+        stroke-linecap: butt;
+      }
+    </style>
+  </defs>
+
+  <!-- H -->
+  <path class="blue" d="M25 46v58 M25 75h48 M73 46v58" />
+  <!-- O -->
+  <path class="blue" d="M100 46h44c18 0 30 12 30 29s-12 29-30 29h-44c-18 0-30-12-30-29s12-29 30-29z" transform="translate(28 0)" />
+  <!-- W -->
+  <path class="blue" d="M235 46l18 58 24-48 24 48 18-58" />
+  <!-- E as bars -->
+  <path class="blue" d="M350 48h55 M350 75h49 M350 102h55" />
+  <!-- Y -->
+  <path class="blue" d="M425 46l32 32 32-32 M457 78v26" />
+  <!-- C -->
+  <path class="blue" d="M548 48h-36c-24 0-42 10-42 27s18 27 42 27h36" />
+
+  <!-- Coin O: segmented orange ring replacing O in COINS -->
+  <g transform="translate(600 75)">
+    <circle class="orange-thin" r="33" stroke-dasharray="30 8 12 7 20 8 16 10" transform="rotate(-16)" />
+    <circle class="orange" r="25" stroke-dasharray="38 10 16 8 22 9 12 8" transform="rotate(18)" />
+    <circle class="orange-thin" r="16" stroke-dasharray="34 10 18 8" transform="rotate(42)" />
+  </g>
+
+  <!-- I -->
+  <path class="blue" d="M656 46v58" />
+  <!-- N -->
+  <path class="blue" d="M690 104V46l56 58V46" />
+  <!-- S -->
+  <path class="blue" d="M830 48h-45c-16 0-24 5-24 14s8 13 24 13h21c16 0 24 5 24 14s-8 15-24 15h-49" />
+</svg>

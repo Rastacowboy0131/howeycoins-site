@@ -1,0 +1,10 @@
+{
+  "name": "howeycoins-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HoweyCoins parody meme coin landing page inspired by the classic Investor.gov fake ICO warning site.",
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "serve": "python3 -m http.server 4173"
+  }
+}
