@@ -104,9 +104,9 @@ holders snapshot JSON + fee amount → buyback/drop plan + excluded wallet repor
 
 Then wire real Solana/PumpSwap/Jupiter calls after launch details are final.
 
-## Current launch config
+## Current pre-launch config
 
-Public values received for the launched coin:
+Public values received for launch prep:
 
 ```txt
 HOWEYCOINS_MINT=G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump

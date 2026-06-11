@@ -136,8 +136,8 @@ function setText(id, value) {
 }
 
 function renderStats() {
-  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pending fee claim' : `${howeyStats.creatorFeesSol.toFixed(3)} SOL`);
-  setText('statSupply', howeyStats.supplyBoughtBack == null ? '0 pending buyback' : howeyStats.supplyBoughtBack.toLocaleString());
+  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pre-launch' : `${howeyStats.creatorFeesSol.toFixed(3)} SOL`);
+  setText('statSupply', howeyStats.supplyBoughtBack == null ? 'Pre-launch' : howeyStats.supplyBoughtBack.toLocaleString());
   setText('statMint', shortAddress(howeyStats.mint));
   setText('statBuybacks', String(howeyStats.totalBuybacks));
   setText('statHolders', String(howeyStats.holdersAirdropped));
