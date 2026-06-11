@@ -121,6 +121,16 @@ function buildDropCardSvg(receipt, config = {}) {
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity="0.35"/>
     </filter>
+    <linearGradient id="card" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff8df"/>
+      <stop offset="0.58" stop-color="#e6fbff"/>
+      <stop offset="1" stop-color="#bdf3ff"/>
+    </linearGradient>
+    <linearGradient id="header" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#087da8"/>
+      <stop offset="0.55" stop-color="#24abc5"/>
+      <stop offset="1" stop-color="#ffd34e"/>
+    </linearGradient>
   </defs>
   <rect width="1200" height="675" fill="url(#sky)"/>
   <circle cx="965" cy="92" r="135" fill="#ffd34e" opacity="0.28"/>
@@ -137,28 +147,29 @@ function buildDropCardSvg(receipt, config = {}) {
   </g>
   <rect width="1200" height="675" fill="#06152b" opacity="0.20"/>
   <rect x="70" y="58" width="1060" height="559" rx="38" fill="#fff8df" filter="url(#shadow)"/>
-  <rect x="92" y="82" width="1016" height="511" rx="28" fill="#10251b" opacity="0.94"/>
-  <rect x="92" y="82" width="1016" height="90" rx="28" fill="#e23a2d"/>
+  <rect x="92" y="82" width="1016" height="511" rx="28" fill="url(#card)" opacity="0.96"/>
+  <rect x="92" y="82" width="1016" height="90" rx="28" fill="url(#header)"/>
+  <path d="M92 158c138 22 248-15 385 3 142 18 249 45 398 13 98-21 168-12 233 4v33H92z" fill="#ffffff" opacity="0.24"/>
   <text x="120" y="140" font-family="Arial Black, Impact, sans-serif" font-size="46" fill="#fff8df">HOWEYCOINS HOLDER DROP</text>
-  <text x="1080" y="138" text-anchor="end" font-family="Arial Black, Impact, sans-serif" font-size="30" fill="#fff8df">$HOWEY</text>
+  <text x="1080" y="138" text-anchor="end" font-family="Arial Black, Impact, sans-serif" font-size="30" fill="#06152b">$HOWEY</text>
 
-  <text x="120" y="222" font-family="Arial, sans-serif" font-size="25" fill="#8fffc1">CREATOR FEES CLAIMED</text>
-  <text x="120" y="282" font-family="Arial Black, Impact, sans-serif" font-size="62" fill="#fff8df">${escapeXml(claimedSol)}</text>
+  <text x="120" y="222" font-family="Arial, sans-serif" font-size="25" fill="#087da8">CREATOR FEES CLAIMED</text>
+  <text x="120" y="282" font-family="Arial Black, Impact, sans-serif" font-size="62" fill="#06152b">${escapeXml(claimedSol)}</text>
 
-  <text x="120" y="348" font-family="Arial, sans-serif" font-size="25" fill="#8fffc1">BUYBACK</text>
-  <text x="120" y="408" font-family="Arial Black, Impact, sans-serif" font-size="58" fill="#fff8df">${escapeXml(buybackSol)}</text>
+  <text x="120" y="348" font-family="Arial, sans-serif" font-size="25" fill="#087da8">BUYBACK</text>
+  <text x="120" y="408" font-family="Arial Black, Impact, sans-serif" font-size="58" fill="#06152b">${escapeXml(buybackSol)}</text>
 
-  <text x="610" y="222" font-family="Arial, sans-serif" font-size="25" fill="#8fffc1">BOUGHT BACK</text>
-  <text x="610" y="282" font-family="Arial Black, Impact, sans-serif" font-size="50" fill="#fff8df">${escapeXml(bought)}</text>
+  <text x="610" y="222" font-family="Arial, sans-serif" font-size="25" fill="#087da8">BOUGHT BACK</text>
+  <text x="610" y="282" font-family="Arial Black, Impact, sans-serif" font-size="50" fill="#06152b">${escapeXml(bought)}</text>
 
-  <text x="610" y="348" font-family="Arial, sans-serif" font-size="25" fill="#8fffc1">AIRDROPPED</text>
-  <text x="610" y="408" font-family="Arial Black, Impact, sans-serif" font-size="50" fill="#fff8df">${escapeXml(airdropped)}</text>
-  <text x="610" y="462" font-family="Arial Black, Impact, sans-serif" font-size="44" fill="#ffd34e">${escapeXml(holderCount)}</text>
+  <text x="610" y="348" font-family="Arial, sans-serif" font-size="25" fill="#087da8">AIRDROPPED</text>
+  <text x="610" y="408" font-family="Arial Black, Impact, sans-serif" font-size="50" fill="#06152b">${escapeXml(airdropped)}</text>
+  <text x="610" y="462" font-family="Arial Black, Impact, sans-serif" font-size="44" fill="#e23a2d">${escapeXml(holderCount)}</text>
 
-  <rect x="120" y="500" width="960" height="1" fill="#8fffc1" opacity="0.5"/>
-  <text x="120" y="545" font-family="Arial, sans-serif" font-size="24" fill="#fff8df">${escapeXml(runId)}</text>
-  <text x="1080" y="545" text-anchor="end" font-family="Arial, sans-serif" font-size="24" fill="#fff8df">${escapeXml(siteUrl)}</text>
-  <text x="120" y="582" font-family="Arial Black, Impact, sans-serif" font-size="22" fill="#ffd34e">THE FAKE ICO LEARNED HOW TO AIRDROP</text>
+  <rect x="120" y="500" width="960" height="2" fill="#24abc5" opacity="0.45"/>
+  <text x="120" y="545" font-family="Arial, sans-serif" font-size="24" fill="#0d4962">${escapeXml(runId)}</text>
+  <text x="1080" y="545" text-anchor="end" font-family="Arial, sans-serif" font-size="24" fill="#0d4962">${escapeXml(siteUrl)}</text>
+  <text x="120" y="582" font-family="Arial Black, Impact, sans-serif" font-size="22" fill="#e23a2d">THE FAKE ICO LEARNED HOW TO AIRDROP</text>
 </svg>`;
 }
 
