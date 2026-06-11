@@ -88,6 +88,7 @@ quiz?.addEventListener('submit', (event) => {
 
 const howeyStats = {
   // Replace these after launch with real on-chain/Pump.fun values.
+  mint: 'G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump',
   creatorFeesSol: null,
   supplyBoughtBack: null,
   totalBuybacks: 0,
@@ -124,14 +125,20 @@ function solscanLink(signatureOrAddress) {
   return `https://solscan.io/tx/${signatureOrAddress}`;
 }
 
+function shortAddress(address) {
+  if (!address || address.length <= 12) return address || '';
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
 }
 
 function renderStats() {
-  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pending launch' : `${howeyStats.creatorFeesSol.toFixed(3)} SOL`);
-  setText('statSupply', howeyStats.supplyBoughtBack == null ? 'Pending contract address' : howeyStats.supplyBoughtBack.toLocaleString());
+  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pending fee claim' : `${howeyStats.creatorFeesSol.toFixed(3)} SOL`);
+  setText('statSupply', howeyStats.supplyBoughtBack == null ? '0 pending buyback' : howeyStats.supplyBoughtBack.toLocaleString());
+  setText('statMint', shortAddress(howeyStats.mint));
   setText('statBuybacks', String(howeyStats.totalBuybacks));
   setText('statHolders', String(howeyStats.holdersAirdropped));
 

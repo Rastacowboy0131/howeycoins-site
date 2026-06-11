@@ -11,7 +11,7 @@ Every run, usually every 5 minutes:
    - buyback budget
    - optional gas/reserve buffer
    - optional ops buffer if needed
-3. Swap the buyback budget into `$HOWEYCOINS` using a Jupiter route or another approved Solana swap route.
+3. Swap the buyback budget into `$HOWEYCOINS` using PumpSwap-native liquidity, or a Jupiter route that correctly routes through PumpSwap.
 4. Snapshot current token holders.
 5. Remove ineligible wallets.
 6. Pick the airdrop batch.
@@ -102,4 +102,17 @@ Build the engine in dry-run mode:
 holders snapshot JSON + fee amount → buyback/drop plan + excluded wallet report
 ```
 
-Then wire real Solana/Pump/Jupiter calls after launch details are final.
+Then wire real Solana/PumpSwap/Jupiter calls after launch details are final.
+
+## Current launch config
+
+Public values received for the launched coin:
+
+```txt
+HOWEYCOINS_MINT=G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump
+DEV_PUBLIC_KEY=Ehr92fYMp2DmzavJCCY4wfGnYLasucDPBnodqjL2agWz
+```
+
+Private keys must **not** be committed to this repo, written into docs, pasted into source code, or shown on the website. The transaction engine should read any signing key from a local ignored `.env` file or keypair path only.
+
+Pump.fun coins now migrate to **PumpSwap**, not Raydium, so the buyback engine should not assume Raydium pools. Use PumpSwap directly when supported by the chosen SDK/API, or use Jupiter quote/swap routes only after confirming the route reaches the active PumpSwap liquidity for the mint.
