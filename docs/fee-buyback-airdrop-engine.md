@@ -119,6 +119,64 @@ npm start
 
 Then wire real Solana/PumpSwap/Jupiter calls after launch details are final.
 
+## Fully automatic runner
+
+A local money-moving runner now lives at:
+
+```bash
+scripts/howey-auto.js
+```
+
+It reuses the existing local claim-app environment from `/Users/rasta/Desktop/pumpswap-claimer/.env` when this repo does not have a local `.env`, so the existing Helius RPC/private key setup can be used without committing secrets.
+
+User-approved wallet model:
+
+- Dev wallet is also the ops wallet.
+- Dev wallet is also the airdrop sender wallet.
+- Dev/ops/airdrop wallet is always excluded from holder drops.
+- LP/pool wallets should be added to `LP_POOL_WALLETS` so they are excluded too.
+
+Live loop implemented:
+
+1. Claim Pump creator fees with `@pump-fun/pump-sdk`.
+2. Apply fee split and per-run cap.
+3. Buy back `$HOWEYCOINS` with Jupiter SOL→mint swap.
+4. Snapshot SPL token holders from RPC.
+5. Exclude dev/ops/airdrop wallet, `LP_POOL_WALLETS`, manually excluded wallets, zero balances, and >3% holders.
+6. Pick weighted random winners.
+7. Send SPL token airdrops from the dev/ops wallet.
+8. Write receipts to `data/runs/<run>.json` and `data/latest.json`.
+9. Track daily buyback spend in `data/howey-auto-state.json` so `MAX_SOL_PER_DAY` is enforced across runs.
+10. Website dashboard tries `data/latest.json` first, then falls back to the demo plan.
+
+The script intentionally refuses to run unless both live-spend gates are set:
+
+```bash
+ENABLE_REAL_TX=true
+FULLY_AUTO=true
+```
+
+Useful commands:
+
+```bash
+npm run howey:auto:once   # one full loop, then exits
+npm run howey:auto        # continuous loop every INTERVAL_MS
+```
+
+Safety values to set before enabling:
+
+```bash
+DEV_PUBLIC_KEY=Ehr92fYMp2DmzavJCCY4wfGnYLasucDPBnodqjL2agWz
+LP_POOL_WALLETS=<comma separated LP/pool token-owner wallets>
+MAX_SOL_PER_RUN=0.25
+MAX_SOL_PER_DAY=2
+MIN_CLAIM_SOL=0.01
+MIN_BUYBACK_SOL=0.01
+SLIPPAGE_BPS=500
+```
+
+Do not run the live loop until LP/pool wallets and spend caps are correct.
+
 ## Current pre-launch config
 
 Public values received for launch prep:

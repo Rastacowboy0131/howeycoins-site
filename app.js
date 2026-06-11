@@ -200,23 +200,27 @@ function receiptRowsFromPlan(plan) {
 function renderEnginePlan(plan) {
   if (!plan) return;
 
-  howeyStats.creatorFeesSol = plan.claim.claimedFeesSol;
-  howeyStats.supplyBoughtBack = plan.buyback.estimatedTokensBought;
-  howeyStats.totalBuybacks = 1;
-  howeyStats.holdersAirdropped = plan.airdrop.winners.length;
+  const claimedFeesSol = plan.claim.claimedFeesSol ?? (Number(plan.claim.claimableLamports || 0) / 1_000_000_000);
+  const boughtBack = plan.buyback.estimatedTokensBought ?? plan.buyback.outputRawAmount ?? 0;
+  const winners = plan.airdrop.winners || [];
+
+  howeyStats.creatorFeesSol = claimedFeesSol;
+  howeyStats.supplyBoughtBack = boughtBack;
+  howeyStats.totalBuybacks = plan.buyback.status === 'skipped' ? 0 : 1;
+  howeyStats.holdersAirdropped = winners.length;
   howeyStats.receipts = receiptRowsFromPlan(plan);
 
-  setText('engineMode', plan.mode.toUpperCase());
+  setText('engineMode', String(plan.mode || 'dry-run').toUpperCase());
   setText('planRunId', plan.runId);
   setText('claimStatus', plan.claim.status);
-  setText('claimAmount', formatSol(plan.claim.claimedFeesSol));
-  setText('buybackRoute', plan.buyback.route);
-  setText('buybackAmount', `${formatSol(plan.buyback.buybackSol)} → est. ${formatTokens(plan.buyback.estimatedTokensBought)} $HOWEYCOINS`);
-  setText('snapshotHash', `${plan.snapshot.hash.slice(0, 12)}...${plan.snapshot.hash.slice(-8)}`);
-  setText('eligibleCount', String(plan.snapshot.eligibleHolderCount));
-  setText('excludedCount', String(plan.snapshot.excludedWalletCount));
-  setText('airdropBatch', String(plan.airdrop.batchSize));
-  setText('airdropTotal', formatTokens(plan.airdrop.totalTokensAirdropped));
+  setText('claimAmount', formatSol(claimedFeesSol));
+  setText('buybackRoute', plan.buyback.route || plan.buyback.status || 'route pending');
+  setText('buybackAmount', `${formatSol(plan.buyback.buybackSol || (Number(plan.buyback.inputLamports || 0) / 1_000_000_000))} → est. ${formatTokens(boughtBack)} $HOWEYCOINS`);
+  setText('snapshotHash', plan.snapshot?.hash ? `${plan.snapshot.hash.slice(0, 12)}...${plan.snapshot.hash.slice(-8)}` : 'snapshot pending');
+  setText('eligibleCount', String(plan.snapshot?.eligibleHolderCount || 0));
+  setText('excludedCount', String(plan.snapshot?.excludedWalletCount || 0));
+  setText('airdropBatch', String(plan.airdrop.batchSize || winners.length || 0));
+  setText('airdropTotal', formatTokens(plan.airdrop.totalTokensAirdropped || 0));
 }
 
 function renderStats() {
@@ -248,10 +252,16 @@ function renderStats() {
 }
 
 async function loadDemoPlan() {
+  const planSources = ['./data/latest.json', './data/howey-run-demo.json'];
   try {
-    const response = await fetch('./data/howey-run-demo.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`Demo plan failed: ${response.status}`);
-    const plan = await response.json();
+    let plan = null;
+    for (const source of planSources) {
+      const response = await fetch(source, { cache: 'no-store' });
+      if (!response.ok) continue;
+      plan = await response.json();
+      break;
+    }
+    if (!plan) throw new Error('No receipt plan available');
     renderEnginePlan(plan);
   } catch (error) {
     console.warn('Using pre-launch fallback stats:', error);
