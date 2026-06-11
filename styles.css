@@ -431,6 +431,40 @@ p { font-size: 18px; line-height: 1.72; }
   font-weight: 800;
   line-height: 1.45;
 }
+.scale-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+.scale-grid span {
+  display: grid;
+  gap: 3px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  background: #f3f8ff;
+  border: 1px solid rgba(8, 28, 58, 0.08);
+}
+.scale-grid b {
+  color: var(--navy);
+  font-size: 13px;
+  letter-spacing: -0.02em;
+}
+.scale-grid small {
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.random-note {
+  margin: 14px 0 0 !important;
+  padding: 14px 16px;
+  border-radius: 16px;
+  color: #23405f;
+  background: rgba(255, 212, 71, 0.2);
+  font-weight: 750;
+}
 .fine-print.left { text-align: left; }
 
 .section-team {
@@ -665,7 +699,7 @@ p { font-size: 18px; line-height: 1.72; }
   .hero { min-height: 760px; }
   .sale-panel { flex-direction: column; width: min(520px, 100%); }
   .countdown-copy { text-align: center; }
-  .two-col, .test-grid, .flag-grid, .team-grid, .quiz-panel, .stats-grid { grid-template-columns: 1fr; }
+  .two-col, .test-grid, .flag-grid, .team-grid, .quiz-panel, .stats-grid, .scale-grid { grid-template-columns: 1fr; }
   .machine-steps { grid-template-columns: 1fr; align-items: stretch; }
   .machine-steps b { transform: rotate(90deg); text-align: center; }
   .drop-log summary { align-items: flex-start; flex-direction: column; }

@@ -17,6 +17,7 @@
       </a>
       <button class="mobile-menu" aria-label="Open menu" aria-expanded="false">☰</button>
       <nav class="nav" aria-label="Main navigation">
+        <a href="#dashboard">Dashboard</a>
         <a href="#lore">Lore</a>
         <a href="#test">Howey Test</a>
         <a href="#drops">Holder Drops</a>
@@ -59,6 +60,58 @@
             Not affiliated with the SEC, Investor.gov, or the original HoweyCoins page.
             Meme coin. Parody. Community chaos.
           </p>
+        </div>
+      </section>
+
+      <section id="dashboard" class="section section-dashboard">
+        <div class="container">
+          <p class="eyebrow center">HoweyLabs Terminal</p>
+          <h2 class="center">Green Bag Dashboard</h2>
+          <p class="center max-text dashboard-intro">
+            The live stats panel for creator fees, supply buybacks, holder drops, and the
+            every-5-minute airdrop log. Plug in the real Pump.fun coin address after launch
+            and this becomes the receipts wall.
+          </p>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span>Creator Fees Collected</span>
+              <strong id="statFees">Pending launch</strong>
+              <small>SOL routed to the chaos wallet</small>
+            </article>
+            <article class="stat-card">
+              <span>Supply Bought Back</span>
+              <strong id="statSupply">Pending contract address</strong>
+              <small>$HOWEYCOINS removed from open market</small>
+            </article>
+            <article class="stat-card">
+              <span>Total Buybacks</span>
+              <strong id="statBuybacks">0</strong>
+              <small>Every 5-minute machine cycles</small>
+            </article>
+            <article class="stat-card">
+              <span>Holders Airdropped</span>
+              <strong id="statHolders">0</strong>
+              <small>Random holders blessed by the test</small>
+            </article>
+          </div>
+
+          <details class="drop-log" open>
+            <summary>
+              <span>Every 5-Min Buyback + Airdrop Receipts</span>
+              <small>Wallet, amount, and Solscan links</small>
+            </summary>
+            <div class="drop-table" role="table" aria-label="Holder airdrop receipt log">
+              <div class="drop-row drop-head" role="row">
+                <span>Time</span>
+                <span>Buyback</span>
+                <span>Airdropped Wallet</span>
+                <span>Amount</span>
+                <span>Receipt</span>
+              </div>
+              <div id="dropLog"></div>
+            </div>
+          </details>
         </div>
       </section>
 
@@ -223,6 +276,17 @@
                   <li>Eligible holder snapshots favor real holders, not whale farming.</li>
                   <li>Each buyback and holder drop gets logged as a public receipt.</li>
                 </ul>
+                <div class="scale-grid" aria-label="Airdrop batch scaling plan">
+                  <span><b>Under 500</b><small>5 wallets/drop</small></span>
+                  <span><b>500–2,000</b><small>10 wallets/drop</small></span>
+                  <span><b>2,000–10,000</b><small>25 wallets/drop</small></span>
+                  <span><b>10,000+</b><small>50 max/drop</small></span>
+                </div>
+                <p class="random-note">
+                  Winner picking uses capped weighted randomness: bigger holders get slightly
+                  better odds, but the 3% cap and square-root weighting stop whales from
+                  dominating the drop machine.
+                </p>
               </div>
               <p class="fine-print left">
                 The whole point: the original HoweyCoins promised fake rewards. This one
@@ -282,58 +346,6 @@
               <p>Running Bitcoin was historic. Running HoweyCoins would be legally confusing, spiritually hilarious.</p>
             </article>
           </div>
-        </div>
-      </section>
-
-      <section id="dashboard" class="section section-dashboard">
-        <div class="container">
-          <p class="eyebrow center">HoweyLabs Terminal</p>
-          <h2 class="center">Green Bag Dashboard</h2>
-          <p class="center max-text dashboard-intro">
-            The live stats panel for creator fees, supply buybacks, holder drops, and the
-            every-5-minute airdrop log. Plug in the real Pump.fun coin address after launch
-            and this becomes the receipts wall.
-          </p>
-
-          <div class="stats-grid">
-            <article class="stat-card">
-              <span>Creator Fees Collected</span>
-              <strong id="statFees">Pending launch</strong>
-              <small>SOL routed to the chaos wallet</small>
-            </article>
-            <article class="stat-card">
-              <span>Supply Bought Back</span>
-              <strong id="statSupply">Pending contract address</strong>
-              <small>$HOWEYCOINS removed from open market</small>
-            </article>
-            <article class="stat-card">
-              <span>Total Buybacks</span>
-              <strong id="statBuybacks">0</strong>
-              <small>Every 5-minute machine cycles</small>
-            </article>
-            <article class="stat-card">
-              <span>Holders Airdropped</span>
-              <strong id="statHolders">0</strong>
-              <small>Random holders blessed by the test</small>
-            </article>
-          </div>
-
-          <details class="drop-log" open>
-            <summary>
-              <span>Every 5-Min Buyback + Airdrop Receipts</span>
-              <small>Wallet, amount, and Solscan links</small>
-            </summary>
-            <div class="drop-table" role="table" aria-label="Holder airdrop receipt log">
-              <div class="drop-row drop-head" role="row">
-                <span>Time</span>
-                <span>Buyback</span>
-                <span>Airdropped Wallet</span>
-                <span>Amount</span>
-                <span>Receipt</span>
-              </div>
-              <div id="dropLog"></div>
-            </div>
-          </details>
         </div>
       </section>
 
