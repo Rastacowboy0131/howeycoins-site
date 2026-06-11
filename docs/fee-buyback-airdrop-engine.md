@@ -102,6 +102,21 @@ Build the engine in dry-run mode:
 holders snapshot JSON + fee amount → buyback/drop plan + excluded wallet report
 ```
 
+Current repo implementation:
+
+- `src/howeyEngine.js` contains the tested pure planning engine.
+- `tests/howeyEngine.test.js` covers fee splits, holder exclusions, batch scaling, stable snapshot hashes, and deterministic winner planning.
+- `scripts/generate-demo-plan.js` creates `data/howey-run-demo.json` for the public dashboard.
+- The website dashboard fetches the JSON and renders the dry-run claim, buyback, snapshot, and airdrop receipt queue.
+
+Useful commands:
+
+```bash
+npm test
+npm run generate:demo
+npm start
+```
+
 Then wire real Solana/PumpSwap/Jupiter calls after launch details are final.
 
 ## Current pre-launch config

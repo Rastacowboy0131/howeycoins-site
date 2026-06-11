@@ -1,0 +1,113 @@
+{
+  "mode": "dry-run",
+  "runId": "HOWEY-DRYRUN-0001",
+  "timestamp": "2026-06-11T16:20:00.000Z",
+  "mint": "G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump",
+  "claim": {
+    "claimedFeesSol": 4,
+    "claimTx": "dry-run-claim-placeholder",
+    "status": "claimed"
+  },
+  "split": {
+    "totalSol": 4,
+    "buybackSol": 3.4,
+    "reserveSol": 0.4,
+    "opsSol": 0.2
+  },
+  "buyback": {
+    "buybackSol": 3.4,
+    "route": "PumpSwap/Jupiter route required after launch",
+    "estimatedTokensBought": 136000000,
+    "swapTx": "",
+    "status": "manual-swap-required"
+  },
+  "snapshot": {
+    "hash": "9d97bc6fee08f6e4853d2aed7b8366832b7d47cbf6bc9985af4724df132d1deb",
+    "eligibleHolderCount": 6,
+    "excludedWalletCount": 4,
+    "excludedByReason": {
+      "excludedWallet": [
+        {
+          "address": "Ehr92fYMp2DmzavJCCY4wfGnYLasucDPBnodqjL2agWz",
+          "balance": 18500000,
+          "share": 0.0185,
+          "weight": 4301.162633521313
+        },
+        {
+          "address": "HOWEYOPS11111111111111111111111111111111111",
+          "balance": 11000000,
+          "share": 0.011,
+          "weight": 3316.6247903554
+        }
+      ],
+      "overMaxWalletShare": [
+        {
+          "address": "WhaleSkip1111111111111111111111111111111111",
+          "balance": 41250000,
+          "share": 0.04125,
+          "weight": 6422.6162893325645
+        }
+      ],
+      "emptyBalance": [
+        {
+          "address": "DustWallet77777777777777777777777777777777",
+          "balance": 0,
+          "share": 0,
+          "weight": 0
+        }
+      ]
+    }
+  },
+  "airdrop": {
+    "batchSize": 5,
+    "totalTokensAirdropped": 136000000,
+    "winners": [
+      {
+        "address": "GreenFlag222222222222222222222222222222222",
+        "balance": 19750000,
+        "holderShare": 0.01975,
+        "weight": 4444.097209,
+        "amount": 33116030,
+        "signature": "",
+        "receiptStatus": "queued-for-manual-send"
+      },
+      {
+        "address": "BeachBag11111111111111111111111111111111111",
+        "balance": 27200000,
+        "holderShare": 0.0272,
+        "weight": 5215.361924,
+        "amount": 38863254,
+        "signature": "",
+        "receiptStatus": "queued-for-manual-send"
+      },
+      {
+        "address": "NotAnICO3333333333333333333333333333333333",
+        "balance": 14100000,
+        "holderShare": 0.0141,
+        "weight": 3754.996671,
+        "amount": 27981067,
+        "signature": "",
+        "receiptStatus": "queued-for-manual-send"
+      },
+      {
+        "address": "HoweyEnjoyer4444444444444444444444444444444",
+        "balance": 7700000,
+        "holderShare": 0.0077,
+        "weight": 2774.887385,
+        "amount": 20677597,
+        "signature": "",
+        "receiptStatus": "queued-for-manual-send"
+      },
+      {
+        "address": "PalmTree55555555555555555555555555555555555",
+        "balance": 4250000,
+        "holderShare": 0.00425,
+        "weight": 2061.552813,
+        "amount": 15362052,
+        "signature": "",
+        "receiptStatus": "queued-for-manual-send"
+      }
+    ],
+    "status": "manual-send-required"
+  }
+}

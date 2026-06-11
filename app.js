@@ -172,14 +172,56 @@ function shortAddress(address) {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
 }
 
+function formatTokens(value) {
+  return Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function formatSol(value) {
+  return `${Number(value || 0).toFixed(3)} SOL`;
+}
+
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
 }
 
+function receiptRowsFromPlan(plan) {
+  if (!plan?.airdrop?.winners?.length) return [];
+  return plan.airdrop.winners.map((winner, index) => ({
+    time: `${plan.runId} #${index + 1}`,
+    buyback: formatSol(plan.buyback.buybackSol),
+    wallet: shortAddress(winner.address),
+    amount: formatTokens(winner.amount),
+    signature: winner.signature,
+    status: winner.receiptStatus || 'queued',
+  }));
+}
+
+function renderEnginePlan(plan) {
+  if (!plan) return;
+
+  howeyStats.creatorFeesSol = plan.claim.claimedFeesSol;
+  howeyStats.supplyBoughtBack = plan.buyback.estimatedTokensBought;
+  howeyStats.totalBuybacks = 1;
+  howeyStats.holdersAirdropped = plan.airdrop.winners.length;
+  howeyStats.receipts = receiptRowsFromPlan(plan);
+
+  setText('engineMode', plan.mode.toUpperCase());
+  setText('planRunId', plan.runId);
+  setText('claimStatus', plan.claim.status);
+  setText('claimAmount', formatSol(plan.claim.claimedFeesSol));
+  setText('buybackRoute', plan.buyback.route);
+  setText('buybackAmount', `${formatSol(plan.buyback.buybackSol)} → est. ${formatTokens(plan.buyback.estimatedTokensBought)} $HOWEYCOINS`);
+  setText('snapshotHash', `${plan.snapshot.hash.slice(0, 12)}...${plan.snapshot.hash.slice(-8)}`);
+  setText('eligibleCount', String(plan.snapshot.eligibleHolderCount));
+  setText('excludedCount', String(plan.snapshot.excludedWalletCount));
+  setText('airdropBatch', String(plan.airdrop.batchSize));
+  setText('airdropTotal', formatTokens(plan.airdrop.totalTokensAirdropped));
+}
+
 function renderStats() {
-  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pre-launch' : `${howeyStats.creatorFeesSol.toFixed(3)} SOL`);
-  setText('statSupply', howeyStats.supplyBoughtBack == null ? 'Pre-launch' : howeyStats.supplyBoughtBack.toLocaleString());
+  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pre-launch' : formatSol(howeyStats.creatorFeesSol));
+  setText('statSupply', howeyStats.supplyBoughtBack == null ? 'Pre-launch' : formatTokens(howeyStats.supplyBoughtBack));
   setText('statMint', shortAddress(howeyStats.mint));
   setText('statBuybacks', String(howeyStats.totalBuybacks));
   setText('statHolders', String(howeyStats.holdersAirdropped));
@@ -191,7 +233,7 @@ function renderStats() {
   dropLog.innerHTML = rows.map((row) => {
     const receipt = row.signature
       ? `<a href="${solscanLink(row.signature)}" target="_blank" rel="noreferrer">Solscan</a>`
-      : '<span>Waiting for tx</span>';
+      : `<span>${row.status || 'Waiting for tx'}</span>`;
 
     return `
       <div class="drop-row" role="row">
@@ -205,4 +247,17 @@ function renderStats() {
   }).join('');
 }
 
-renderStats();
+async function loadDemoPlan() {
+  try {
+    const response = await fetch('./data/howey-run-demo.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Demo plan failed: ${response.status}`);
+    const plan = await response.json();
+    renderEnginePlan(plan);
+  } catch (error) {
+    console.warn('Using pre-launch fallback stats:', error);
+  } finally {
+    renderStats();
+  }
+}
+
+loadDemoPlan();
