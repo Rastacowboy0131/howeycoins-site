@@ -20,6 +20,7 @@ http://localhost:4173
 - `index.html` — page copy and sections
 - `styles.css` — design, colors, layout
 - `app.js` — mobile menu and countdown
+- `docs/fee-buyback-airdrop-engine.md` — fee claim, buyback, and holder-drop engine blueprint
 
 ## Current sections
 
