@@ -76,11 +76,10 @@ a { color: inherit; text-decoration: none; }
   color: white;
   text-align: center;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0)),
-    radial-gradient(circle at 12% 18%, rgba(255, 212, 71, 0.34), transparent 22%),
-    radial-gradient(circle at 83% 12%, rgba(114, 215, 255, 0.56), transparent 24%),
-    linear-gradient(180deg, rgba(8, 28, 58, 0.13) 0%, rgba(8, 28, 58, 0.44) 48%, rgba(8, 28, 58, 0.76) 100%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' x2='0' y1='0' y2='1'%3E%3Cstop stop-color='%2394d9ff'/%3E%3Cstop offset='.48' stop-color='%237cc8db'/%3E%3Cstop offset='.49' stop-color='%232998b8'/%3E%3Cstop offset='1' stop-color='%23047caa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23s)' width='1600' height='900'/%3E%3Cpath fill='%23f5fbff' opacity='.78' d='M0 268c150-45 238 33 354-13 83-32 155-129 274-96 112 30 151 132 278 107 89-18 141-88 229-79 120 13 143 145 265 132 83-9 109-70 200-58v108H0z'/%3E%3Cpath fill='%23053f64' opacity='.38' d='M0 355c191-45 296-21 421-7 118 13 216-48 364-40 143 8 209 58 353 42 141-16 256-76 462-24v574H0z'/%3E%3Cg opacity='.92'%3E%3Cpath fill='%230c5b37' d='M111 177c-78 52-97 134-91 215 50-72 99-118 151-146-23 50-36 99-34 148 41-65 76-108 125-149-6 46-2 90 15 132 19-74 51-131 98-170-79 16-131 45-176 82 16-54 51-92 93-125-75 10-131 43-181 89z'/%3E%3Cpath fill='%23401616' d='M123 268c18 101 9 210-21 330h55c-9-119-3-226 22-325z'/%3E%3C/g%3E%3Cg transform='translate(1360 152)' opacity='.92'%3E%3Cpath fill='%230c5b37' d='M111 25C33 77 14 159 20 240c50-72 99-118 151-146-23 50-36 99-34 148 41-65 76-108 125-149-6 46-2 90 15 132 19-74 51-131 98-170-79 16-131 45-176 82 16-54 51-92 93-125-75 10-131 43-181 89z'/%3E%3Cpath fill='%23401616' d='M123 116c18 101 9 210-21 330h55c-9-119-3-226 22-325z'/%3E%3C/g%3E%3Cellipse cx='800' cy='660' rx='820' ry='180' fill='%23a8f1ff' opacity='.23'/%3E%3Cellipse cx='800' cy='632' rx='580' ry='96' fill='%23ffffff' opacity='.16'/%3E%3C/svg%3E");
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0)),
+    radial-gradient(circle at 50% 28%, rgba(255, 212, 71, 0.20), transparent 24%),
+    linear-gradient(180deg, rgba(8, 28, 58, 0.10) 0%, rgba(8, 28, 58, 0.34) 45%, rgba(8, 28, 58, 0.72) 100%),
+    url("./assets/howey-resort-bg.svg");
   background-size: cover;
   background-position: center;
 }

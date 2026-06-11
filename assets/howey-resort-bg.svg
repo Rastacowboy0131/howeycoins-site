@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="Tropical resort background with infinity pool, palms, ocean, and islands">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#dff5ff"/>
+      <stop offset="0.34" stop-color="#9ed9f2"/>
+      <stop offset="0.64" stop-color="#2eb5d6"/>
+      <stop offset="1" stop-color="#087da8"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#bdf7ff" stop-opacity="0.92"/>
+      <stop offset="0.35" stop-color="#53cae3" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#0475a4"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff7bc" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#fff7bc" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <circle cx="1215" cy="116" r="210" fill="url(#glow)"/>
+
+  <!-- distant clouds -->
+  <g fill="#ffffff" opacity="0.52" filter="url(#soft)">
+    <ellipse cx="354" cy="142" rx="110" ry="30"/>
+    <ellipse cx="438" cy="132" rx="88" ry="28"/>
+    <ellipse cx="1050" cy="170" rx="150" ry="34"/>
+    <ellipse cx="1160" cy="154" rx="98" ry="27"/>
+  </g>
+
+  <!-- islands and hills -->
+  <path d="M0 330c128-46 231-39 332-4 132 45 205-42 317-31 84 8 134 55 229 48 111-9 174-77 294-61 103 14 139 72 241 61 75-8 121-42 187-31v132H0z" fill="#144f67" opacity="0.62"/>
+  <path d="M0 368c190-58 318-28 470-17 145 11 240-51 395-31 151 19 248 68 404 45 120-18 226-61 331-28v126H0z" fill="#083c58" opacity="0.46"/>
+
+  <!-- ocean line -->
+  <rect x="0" y="380" width="1600" height="230" fill="#24abc5" opacity="0.78"/>
+  <path d="M0 430c150 18 286-19 441 0 153 19 287 44 462 7 158-34 269-14 387 7 137 24 234-8 310-28v120H0z" fill="#7ceaff" opacity="0.22"/>
+  <path d="M0 455c180 12 321-12 501 3 134 11 254 31 382 7 176-32 317-22 460-1 116 16 191-4 257-22" fill="none" stroke="#dffcff" stroke-width="4" opacity="0.45"/>
+
+  <!-- resort deck left -->
+  <g opacity="0.82">
+    <path d="M0 450h260l88 98H0z" fill="#f7fbff" opacity="0.58"/>
+    <path d="M55 402h238v34H55z" fill="#ffffff" opacity="0.8"/>
+    <rect x="72" y="436" width="18" height="118" fill="#ffffff" opacity="0.74"/>
+    <rect x="235" y="436" width="18" height="118" fill="#ffffff" opacity="0.74"/>
+    <path d="M25 520h375" stroke="#ffffff" stroke-width="8" opacity="0.65"/>
+  </g>
+
+  <!-- infinity pool foreground -->
+  <path d="M0 508c175-24 294 30 450 16 146-13 251-83 428-52 169 30 269 107 459 76 91-15 177-42 263-51v403H0z" fill="url(#water)"/>
+  <path d="M0 526c178 57 300 48 462 19 170-31 252-83 430-50 176 33 273 92 452 66 93-13 180-38 256-45" fill="none" stroke="#f3ffff" stroke-width="10" opacity="0.34"/>
+  <ellipse cx="790" cy="690" rx="890" ry="174" fill="#d9fdff" opacity="0.18"/>
+  <ellipse cx="786" cy="654" rx="620" ry="89" fill="#ffffff" opacity="0.14"/>
+
+  <!-- left palm -->
+  <g transform="translate(58 115) rotate(-8)">
+    <path d="M102 214c32 145 28 283-18 474h82c-25-187-19-329 33-480z" fill="#69351f"/>
+    <path d="M102 214c32 145 28 283-18 474h38c6-172 9-326 15-468z" fill="#8a4a27" opacity="0.7"/>
+    <g fill="#0f6d3c">
+      <path d="M145 116C45 138-20 205-61 315 21 258 89 230 171 219 96 274 56 337 43 414c65-76 121-122 205-151-45 71-54 140-28 207 31-100 78-174 159-233-89 0-158 22-224 63 35-73 90-128 158-166-81-8-138 13-202 61 19-45 50-78 95-102-21 4-41 12-61 23z"/>
+      <path d="M151 115c-112-23-205 6-288 91 103-30 179-29 253 0-93 18-159 55-205 118 91-35 160-45 245-31-75 37-119 91-130 161 75-76 150-124 251-139-68-46-134-67-207-72 69-34 143-41 219-29-50-58-108-84-180-85 39-22 80-29 128-24-27-15-56-23-86-30z" opacity="0.9"/>
+    </g>
+  </g>
+
+  <!-- right palm -->
+  <g transform="translate(1320 95) rotate(9)">
+    <path d="M110 240c26 135 19 265-25 445h80c-23-181-14-313 31-447z" fill="#69351f"/>
+    <path d="M150 130C46 148-24 215-68 326 18 265 91 235 177 224 100 282 62 348 53 426c64-78 125-128 212-159-48 74-55 145-25 213 29-103 82-180 167-240-96 4-168 30-236 75 33-77 90-137 160-177-84-7-145 17-209 69 20-47 55-83 102-109-26 5-50 15-74 32z" fill="#0d6c3d"/>
+    <path d="M151 128c-110-26-204 4-290 90 106-30 184-27 261 5-96 16-166 54-214 120 96-37 169-47 257-29-77 38-123 94-135 167 80-80 158-129 263-143-72-49-142-70-218-74 71-35 149-42 229-28-52-61-113-88-190-89 42-22 86-29 136-22-32-18-64-28-99-37z" fill="#11814a" opacity="0.9"/>
+  </g>
+
+  <!-- dark vignette helps white hero copy read -->
+  <rect width="1600" height="900" fill="#06152b" opacity="0.14"/>
+</svg>
