@@ -107,45 +107,6 @@
             </article>
           </div>
 
-          <div class="engine-console" aria-label="Claim buyback and holder airdrop engine status">
-            <div class="engine-head">
-              <div>
-                <p class="eyebrow">Engine Built</p>
-                <h3>Claim → Buyback → Airdrop Tech</h3>
-              </div>
-              <div class="engine-pill">
-                <span id="engineMode">DRY-RUN</span>
-                <small id="planRunId">waiting for plan</small>
-              </div>
-            </div>
-            <div class="engine-grid">
-              <article>
-                <span>01 Claim Fees</span>
-                <strong id="claimAmount">Waiting for launch</strong>
-                <small>Status: <b id="claimStatus">claim-needed</b></small>
-              </article>
-              <article>
-                <span>02 Route Buyback</span>
-                <strong id="buybackAmount">Waiting for fees</strong>
-                <small id="buybackRoute">PumpSwap/Jupiter route required after launch</small>
-              </article>
-              <article>
-                <span>03 Snapshot Holders</span>
-                <strong id="snapshotHash">snapshot pending</strong>
-                <small>Eligible: <b id="eligibleCount">0</b> · Excluded: <b id="excludedCount">0</b></small>
-              </article>
-              <article>
-                <span>04 Queue Airdrops</span>
-                <strong><b id="airdropBatch">0</b> wallets</strong>
-                <small>Total queued: <b id="airdropTotal">0</b> $HOWEYCOINS</small>
-              </article>
-            </div>
-            <p class="engine-note">
-              This is the safe pre-launch dry-run engine: it can calculate fee splits, skip whales/dev/ops wallets,
-              pick capped weighted winners, and publish receipts without touching private keys or spending SOL.
-              Real claims/swaps/transfers stay manual until the launch wallet, route, and limits are confirmed.
-            </p>
-          </div>
 
           <details class="drop-log" open>
             <summary>
