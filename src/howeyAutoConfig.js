@@ -60,16 +60,19 @@ function buildAutomationConfig(env = process.env) {
     enableRealTx: parseBool(env.ENABLE_REAL_TX),
     fullyAuto: parseBool(env.FULLY_AUTO),
     dryRun: !parseBool(env.ENABLE_REAL_TX),
-    intervalMs: Math.max(30_000, parseNumber(env.INTERVAL_MS, 300_000)),
+    intervalMs: Math.max(30_000, parseNumber(env.INTERVAL_MS, 60_000)),
+    airdropIntervalMs: Math.max(60_000, parseNumber(env.AIRDROP_INTERVAL_MS, 300_000)),
     minClaimLamports: toLamports(env.MIN_CLAIM_SOL || '0.01'),
     minBuybackLamports: toLamports(env.MIN_BUYBACK_SOL || env.MIN_CLAIM_SOL || '0.01'),
-    maxSolPerRun: parseNumber(env.MAX_SOL_PER_RUN, 0.25),
-    maxSolPerDay: parseNumber(env.MAX_SOL_PER_DAY, 2),
-    maxLamportsPerRun: toLamports(env.MAX_SOL_PER_RUN || '0.25'),
-    maxLamportsPerDay: toLamports(env.MAX_SOL_PER_DAY || '2'),
-    buybackShare: parseNumber(env.BUYBACK_SHARE, 0.85),
-    reserveShare: parseNumber(env.RESERVE_SHARE, 0.1),
-    opsShare: parseNumber(env.OPS_SHARE, 0.05),
+    gasReserveSol: parseNumber(env.GAS_RESERVE_SOL, 0.1),
+    gasReserveLamports: toLamports(env.GAS_RESERVE_SOL || '0.1'),
+    maxSolPerRun: parseNumber(env.MAX_SOL_PER_RUN, 0),
+    maxSolPerDay: parseNumber(env.MAX_SOL_PER_DAY, 0),
+    maxLamportsPerRun: toLamports(env.MAX_SOL_PER_RUN || '0'),
+    maxLamportsPerDay: toLamports(env.MAX_SOL_PER_DAY || '0'),
+    buybackShare: parseNumber(env.BUYBACK_SHARE, 1),
+    reserveShare: parseNumber(env.RESERVE_SHARE, 0),
+    opsShare: parseNumber(env.OPS_SHARE, 0),
     maxWalletShare: parseNumber(env.MAX_WALLET_SHARE, 0.03),
     slippageBps: Math.trunc(parseNumber(env.SLIPPAGE_BPS, 500)),
     loopOnce: parseBool(env.LOOP_ONCE),
@@ -89,8 +92,7 @@ function shouldRunAutomation(config) {
   if (!config.devPublicKey) missing.push('DEV_PUBLIC_KEY');
   if (!config.enableRealTx) missing.push('ENABLE_REAL_TX=true');
   if (!config.fullyAuto) missing.push('FULLY_AUTO=true');
-  if (!config.maxLamportsPerRun) missing.push('MAX_SOL_PER_RUN');
-  if (!config.maxLamportsPerDay) missing.push('MAX_SOL_PER_DAY');
+  if (!config.gasReserveLamports) missing.push('GAS_RESERVE_SOL');
 
   return {
     ok: missing.length === 0,

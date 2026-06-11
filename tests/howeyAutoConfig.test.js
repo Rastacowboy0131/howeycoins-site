@@ -44,11 +44,21 @@ test('buildAutomationConfig requires explicit real transaction and full auto fla
     ...baseEnv,
     ENABLE_REAL_TX: 'true',
     FULLY_AUTO: 'true',
-    MAX_SOL_PER_RUN: '0.25',
-    MAX_SOL_PER_DAY: '1.5',
+    GAS_RESERVE_SOL: '0.1',
   }));
 
   assert.equal(ready.ok, true);
+});
+
+test('buildAutomationConfig defaults to claim/buyback every minute, airdrop every five minutes, and full buyback above gas reserve', () => {
+  const config = buildAutomationConfig({});
+
+  assert.equal(config.intervalMs, 60_000);
+  assert.equal(config.airdropIntervalMs, 300_000);
+  assert.equal(config.gasReserveLamports, 100_000_000);
+  assert.equal(config.buybackShare, 1);
+  assert.equal(config.maxLamportsPerRun, 0);
+  assert.equal(config.maxLamportsPerDay, 0);
 });
 
 test('toLamports converts SOL strings into integer lamports', () => {

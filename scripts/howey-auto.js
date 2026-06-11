@@ -28,7 +28,12 @@ const {
 const { OnlinePumpSdk } = require('@pump-fun/pump-sdk');
 
 const { buildAutomationConfig, shouldRunAutomation, LAMPORTS_PER_SOL } = require('../src/howeyAutoConfig');
-const { applyDailySpend, remainingDailyLamports } = require('../src/howeyAutoState');
+const {
+  addPendingAirdrop,
+  isAirdropDue,
+  markAirdropSent,
+  normalizeState,
+} = require('../src/howeyAutoState');
 const { classifyHolders, getBatchSize, snapshotHash } = require('../src/howeyEngine');
 
 const WSOL_MINT = 'So11111111111111111111111111111111111111112';
@@ -146,6 +151,12 @@ async function getOwnerTokenBalanceRaw(connection, owner, mint) {
   }, 0);
 }
 
+async function getBuybackLamportsLeavingGas({ connection, wallet, config }) {
+  const balance = await connection.getBalance(wallet.publicKey, 'confirmed');
+  const spendable = Math.max(0, balance - config.gasReserveLamports);
+  return Math.floor(spendable * config.buybackShare);
+}
+
 async function buyBackWithJupiter({ connection, wallet, config, lamports }) {
   if (lamports < config.minBuybackLamports) {
     return { status: 'skipped-low-buyback', inputLamports: lamports, outputRawAmount: 0, signature: '' };
@@ -249,79 +260,53 @@ async function runOnce({ connection, wallet, config }) {
   const runId = makeRunId(started);
   log('run-start', { runId, wallet: wallet.publicKey.toBase58(), mint: config.mint });
 
-  const state = readState(config);
-  const remainingToday = remainingDailyLamports(state, config.maxLamportsPerDay, started);
-  if (remainingToday < config.minBuybackLamports) {
-    const receipt = {
-      mode: 'fully-auto',
-      runId,
-      timestamp: started.toISOString(),
-      mint: config.mint,
-      claim: { status: 'skipped-daily-cap', claimableLamports: 0, signature: '' },
-      buyback: { status: 'skipped-daily-cap', inputLamports: 0, signature: '', outputRawAmount: 0 },
-      snapshot: null,
-      airdrop: { status: 'skipped', winners: [] },
-      limits: { remainingDailySol: lamportsToSol(remainingToday), maxSolPerDay: config.maxSolPerDay },
-    };
-    await writeReceipt(config, receipt);
-    log('daily-cap-reached', { remainingDailySol: lamportsToSol(remainingToday), maxSolPerDay: config.maxSolPerDay });
-    return receipt;
-  }
+  let state = normalizeState(readState(config));
 
   const claim = await claimCreatorFees({ connection, wallet, config });
   log('claim-result', { status: claim.status, claimableSol: lamportsToSol(claim.claimableLamports), signature: claim.signature });
 
-  const buybackLamports = Math.min(
-    Math.floor(claim.claimableLamports * config.buybackShare),
-    config.maxLamportsPerRun,
-    remainingToday,
-  );
+  const buybackLamports = await getBuybackLamportsLeavingGas({ connection, wallet, config });
+  let buyback = { status: 'skipped', inputLamports: buybackLamports, signature: '', outputRawAmount: 0 };
 
-  if (claim.status !== 'claimed' || buybackLamports < config.minBuybackLamports) {
-    const receipt = {
-      mode: 'fully-auto',
-      runId,
-      timestamp: started.toISOString(),
-      mint: config.mint,
-      claim,
-      buyback: { status: 'skipped', inputLamports: buybackLamports, signature: '', outputRawAmount: 0 },
-      snapshot: null,
-      airdrop: { status: 'skipped', winners: [] },
-    };
-    await writeReceipt(config, receipt);
-    return receipt;
+  if (buybackLamports >= config.minBuybackLamports) {
+    buyback = await buyBackWithJupiter({ connection, wallet, config, lamports: buybackLamports });
+    state = addPendingAirdrop(state, buyback.outputRawAmount || 0);
+    log('buyback-result', {
+      status: buyback.status,
+      inputSol: lamportsToSol(buyback.inputLamports),
+      outputRawAmount: buyback.outputRawAmount,
+      signature: buyback.signature,
+    });
+  } else {
+    log('buyback-skipped', {
+      reason: 'below-min-or-gas-reserve',
+      spendableSol: lamportsToSol(buybackLamports),
+      gasReserveSol: config.gasReserveSol,
+    });
   }
 
-  const buyback = await buyBackWithJupiter({ connection, wallet, config, lamports: buybackLamports });
-  const updatedState = applyDailySpend(state, buyback.inputLamports || 0, started);
-  writeState(config, updatedState);
-  log('buyback-result', { status: buyback.status, inputSol: lamportsToSol(buyback.inputLamports), outputRawAmount: buyback.outputRawAmount, signature: buyback.signature });
+  let snapshot = null;
+  let airdrop = {
+    status: 'queued',
+    batchSize: 0,
+    pendingRawAmount: state.pendingAirdropRawAmount,
+    nextAirdropAfterMs: config.airdropIntervalMs,
+    winners: [],
+  };
 
-  const [holders, totalSupply] = await Promise.all([
-    fetchHolders(connection, config.mint),
-    getMintSupply(connection, config.mint),
-  ]);
-  const holderConfig = { totalSupply, maxWalletShare: config.maxWalletShare, excludedWallets: config.excludedWallets };
-  const classified = classifyHolders(holders, holderConfig);
-  const batchSize = getBatchSize(classified.eligible.length);
-  const winners = pickWeightedWinners(classified.eligible, batchSize, `${runId}|${buyback.signature}`);
-  const plannedAirdrops = allocateAirdrops(winners, buyback.outputRawAmount);
-  const sentAirdrops = await sendAirdrops({ connection, wallet, config, winners: plannedAirdrops });
+  if (state.pendingAirdropRawAmount > 0 && isAirdropDue(state, config.airdropIntervalMs, started)) {
+    const [holders, totalSupply] = await Promise.all([
+      fetchHolders(connection, config.mint),
+      getMintSupply(connection, config.mint),
+    ]);
+    const holderConfig = { totalSupply, maxWalletShare: config.maxWalletShare, excludedWallets: config.excludedWallets };
+    const classified = classifyHolders(holders, holderConfig);
+    const batchSize = getBatchSize(classified.eligible.length);
+    const winners = pickWeightedWinners(classified.eligible, batchSize, `${runId}|${buyback.signature}|${state.pendingAirdropRawAmount}`);
+    const plannedAirdrops = allocateAirdrops(winners, state.pendingAirdropRawAmount);
+    const sentAirdrops = await sendAirdrops({ connection, wallet, config, winners: plannedAirdrops });
 
-  const receipt = {
-    mode: 'fully-auto',
-    runId,
-    timestamp: started.toISOString(),
-    mint: config.mint,
-    claim: { status: claim.status, claimedFeesSol: lamportsToSol(claim.claimableLamports), claimTx: claim.signature },
-    buyback: {
-      status: buyback.status,
-      buybackSol: lamportsToSol(buyback.inputLamports),
-      estimatedTokensBought: buyback.outputRawAmount,
-      swapTx: buyback.signature,
-      route: 'Jupiter quote/swap; verify routePlan for PumpSwap liquidity',
-    },
-    snapshot: {
+    snapshot = {
       hash: snapshotHash(holders, config.mint),
       slot: await connection.getSlot('confirmed'),
       totalSupply,
@@ -329,16 +314,47 @@ async function runOnce({ connection, wallet, config }) {
       eligibleHolderCount: classified.eligible.length,
       excludedWalletCount: Object.values(classified.excludedByReason).reduce((sum, list) => sum + list.length, 0),
       excludedByReason: classified.excludedByReason,
-    },
-    airdrop: {
+    };
+    airdrop = {
       status: 'sent',
       batchSize,
       totalTokensAirdropped: sentAirdrops.reduce((sum, winner) => sum + winner.amount, 0),
       winners: sentAirdrops,
+    };
+    state = markAirdropSent(state, started);
+  } else if (state.pendingAirdropRawAmount <= 0) {
+    airdrop.status = 'skipped-no-pending-tokens';
+  }
+
+  writeState(config, state);
+
+  const receipt = {
+    mode: 'fully-auto',
+    runId,
+    timestamp: started.toISOString(),
+    mint: config.mint,
+    cadence: {
+      claimAndBuybackEveryMs: config.intervalMs,
+      airdropEveryMs: config.airdropIntervalMs,
+      gasReserveSol: config.gasReserveSol,
+    },
+    claim: { status: claim.status, claimedFeesSol: lamportsToSol(claim.claimableLamports), claimTx: claim.signature },
+    buyback: {
+      status: buyback.status,
+      buybackSol: lamportsToSol(buyback.inputLamports),
+      estimatedTokensBought: buyback.outputRawAmount,
+      swapTx: buyback.signature,
+      route: buyback.signature ? 'Jupiter quote/swap; verify routePlan for PumpSwap liquidity' : '',
+    },
+    snapshot,
+    airdrop,
+    state: {
+      pendingAirdropRawAmount: state.pendingAirdropRawAmount,
+      lastAirdropAt: state.lastAirdropAt,
     },
   };
   await writeReceipt(config, receipt);
-  log('run-complete', { runId, winners: sentAirdrops.length });
+  log('run-complete', { runId, buybackStatus: buyback.status, airdropStatus: airdrop.status });
   return receipt;
 }
 
@@ -361,8 +377,9 @@ async function main() {
     wallet: wallet.publicKey.toBase58(),
     mint: config.mint,
     intervalMs: config.intervalMs,
-    maxSolPerRun: config.maxSolPerRun,
-    maxSolPerDay: config.maxSolPerDay,
+    airdropIntervalMs: config.airdropIntervalMs,
+    gasReserveSol: config.gasReserveSol,
+    buybackShare: config.buybackShare,
     excludedWallets: config.excludedWallets.length,
   });
 
@@ -387,5 +404,6 @@ if (require.main === module) {
 module.exports = {
   allocateAirdrops,
   fetchHolders,
+  getBuybackLamportsLeavingGas,
   runOnce,
 };
