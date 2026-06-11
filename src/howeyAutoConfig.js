@@ -81,6 +81,17 @@ function buildAutomationConfig(env = process.env) {
     receiptDir: env.RECEIPT_DIR || 'data/runs',
     latestReceiptPath: env.LATEST_RECEIPT_PATH || 'data/latest.json',
     statePath: env.STATE_PATH || 'data/howey-auto-state.json',
+    postToX: parseBool(env.POST_TO_X),
+    xDryRun: env.X_DRY_RUN === undefined ? true : parseBool(env.X_DRY_RUN),
+    siteUrl: env.SITE_URL || 'https://howeycoins.org',
+    socialStatePath: env.SOCIAL_STATE_PATH || 'data/howey-social-state.json',
+    xDryRunPath: env.X_DRY_RUN_PATH || 'data/x-drop-preview.json',
+    cardOutputDir: env.CARD_OUTPUT_DIR || 'data/cards',
+    xApiKey: env.X_API_KEY || '',
+    xApiSecret: env.X_API_SECRET || '',
+    xAccessToken: env.X_ACCESS_TOKEN || '',
+    xAccessTokenSecret: env.X_ACCESS_TOKEN_SECRET || '',
+    xHandle: env.X_HANDLE || '',
   };
 }
 

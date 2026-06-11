@@ -61,6 +61,29 @@ test('buildAutomationConfig defaults to claim/buyback every minute, airdrop ever
   assert.equal(config.maxLamportsPerDay, 0);
 });
 
+test('buildAutomationConfig keeps X posting disabled by default and reads social env flags', () => {
+  const disabled = buildAutomationConfig({});
+  assert.equal(disabled.postToX, false);
+  assert.equal(disabled.xDryRun, true);
+  assert.equal(disabled.siteUrl, 'https://howeycoins.org');
+
+  const enabled = buildAutomationConfig({
+    POST_TO_X: 'true',
+    X_DRY_RUN: 'false',
+    SITE_URL: 'https://example.invalid',
+    X_API_KEY: 'key',
+    X_API_SECRET: 'secret',
+    X_ACCESS_TOKEN: 'token',
+    X_ACCESS_TOKEN_SECRET: 'token-secret',
+  });
+
+  assert.equal(enabled.postToX, true);
+  assert.equal(enabled.xDryRun, false);
+  assert.equal(enabled.siteUrl, 'https://example.invalid');
+  assert.equal(enabled.xApiKey, 'key');
+  assert.equal(enabled.xAccessTokenSecret, 'token-secret');
+});
+
 test('toLamports converts SOL strings into integer lamports', () => {
   assert.equal(toLamports('0.25'), 250_000_000);
   assert.equal(toLamports('1'), 1_000_000_000);

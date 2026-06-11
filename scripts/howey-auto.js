@@ -28,6 +28,7 @@ const {
 const { OnlinePumpSdk } = require('@pump-fun/pump-sdk');
 
 const { buildAutomationConfig, shouldRunAutomation, LAMPORTS_PER_SOL } = require('../src/howeyAutoConfig');
+const { publishDropReceipt } = require('../src/howeyDropPublisher');
 const {
   addPendingAirdrop,
   isAirdropDue,
@@ -354,6 +355,12 @@ async function runOnce({ connection, wallet, config }) {
     },
   };
   await writeReceipt(config, receipt);
+  try {
+    const social = await publishDropReceipt(receipt, config);
+    log('x-drop-post', { status: social.status, runId: social.runId, tweetId: social.tweetId || '', previewPath: social.previewPath || '' });
+  } catch (error) {
+    console.error(`[howey-auto] x-drop-post failed: ${error.stack || error.message}`);
+  }
   log('run-complete', { runId, buybackStatus: buyback.status, airdropStatus: airdrop.status });
   return receipt;
 }
