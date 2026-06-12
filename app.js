@@ -128,9 +128,13 @@ quiz?.addEventListener('submit', (event) => {
   `;
 });
 
+const HOWEY_MINT = 'G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump';
+const HOWEY_SIGNER = '7KGRT3p2GZtgpDJenrHJboJF2JvGZrRESjFV1JFn9t6E';
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const SOLANA_RPC_URL = window.HOWEY_SOLANA_RPC_URL || 'https://solana-rpc.publicnode.com';
+
 const howeyStats = {
-  // Replace these after launch with real on-chain/Pump.fun values.
-  mint: 'G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump',
+  mint: HOWEY_MINT,
   creatorFeesSol: null,
   buybackInputAmount: null,
   buybackInputSymbol: 'USDC',
@@ -166,6 +170,52 @@ function formatInput(value, symbol = 'USDC') {
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
+}
+
+function formatDateTime(unixSeconds) {
+  if (!unixSeconds) return 'Recent';
+  return new Date(unixSeconds * 1000).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function tokenBalanceMap(tx, side) {
+  const balances = tx?.meta?.[side] || [];
+  const out = new Map();
+  for (const entry of balances) {
+    if (!entry.owner || !entry.mint) continue;
+    const key = `${entry.owner}|${entry.mint}`;
+    const amount = Number(entry.uiTokenAmount?.uiAmountString || entry.uiTokenAmount?.uiAmount || 0);
+    out.set(key, (out.get(key) || 0) + amount);
+  }
+  return out;
+}
+
+function tokenDelta(tx, owner, mint) {
+  const key = `${owner}|${mint}`;
+  const pre = tokenBalanceMap(tx, 'preTokenBalances').get(key) || 0;
+  const post = tokenBalanceMap(tx, 'postTokenBalances').get(key) || 0;
+  return post - pre;
+}
+
+function positiveRecipientDeltas(tx, mint, excludedOwner) {
+  const pre = tokenBalanceMap(tx, 'preTokenBalances');
+  const post = tokenBalanceMap(tx, 'postTokenBalances');
+  const owners = new Set();
+  for (const key of pre.keys()) {
+    if (key.endsWith(`|${mint}`)) owners.add(key.split('|')[0]);
+  }
+  for (const key of post.keys()) {
+    if (key.endsWith(`|${mint}`)) owners.add(key.split('|')[0]);
+  }
+
+  return [...owners]
+    .filter((owner) => owner !== excludedOwner)
+    .map((owner) => ({ owner, delta: tokenDelta(tx, owner, mint) }))
+    .filter((item) => item.delta > 0);
 }
 
 function receiptRowsFromPlan(plan) {
@@ -245,6 +295,94 @@ function renderStats() {
   }).join('');
 }
 
+async function solanaRpc(method, params) {
+  const response = await fetch(SOLANA_RPC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: `howey-${Date.now()}`, method, params }),
+  });
+  if (!response.ok) throw new Error(`Solana RPC ${method} failed: ${response.status}`);
+  const payload = await response.json();
+  if (payload.error) throw new Error(payload.error.message || `Solana RPC ${method} error`);
+  return payload.result;
+}
+
+function analyzeHoweyTransaction(tx, signature) {
+  if (!tx?.meta || tx.meta.err) return [];
+
+  const signerUsdcDelta = tokenDelta(tx, HOWEY_SIGNER, USDC_MINT);
+  const signerHoweyDelta = tokenDelta(tx, HOWEY_SIGNER, HOWEY_MINT);
+  const rows = [];
+
+  if (signerUsdcDelta < -0.000001 && signerHoweyDelta > 0.000001) {
+    rows.push({
+      type: 'buyback',
+      time: formatDateTime(tx.blockTime),
+      buyback: formatInput(Math.abs(signerUsdcDelta), 'USDC'),
+      wallet: 'Green Bag',
+      amount: `${formatTokens(signerHoweyDelta)} bought`,
+      signature,
+      inputAmount: Math.abs(signerUsdcDelta),
+      tokensBought: signerHoweyDelta,
+    });
+  }
+
+  const signerSentHowey = signerHoweyDelta < -0.000001;
+  if (signerSentHowey) {
+    for (const recipient of positiveRecipientDeltas(tx, HOWEY_MINT, HOWEY_SIGNER)) {
+      rows.push({
+        type: 'airdrop',
+        time: formatDateTime(tx.blockTime),
+        buyback: 'Holder drop',
+        wallet: shortAddress(recipient.owner),
+        amount: formatTokens(recipient.delta),
+        signature,
+        inputAmount: 0,
+        tokensAirdropped: recipient.delta,
+        recipient: recipient.owner,
+      });
+    }
+  }
+
+  return rows;
+}
+
+async function loadOnChainActivity() {
+  const signatures = await solanaRpc('getSignaturesForAddress', [HOWEY_SIGNER, { limit: 40 }]);
+  const txs = await Promise.all(
+    signatures.map(async (entry) => {
+      try {
+        const tx = await solanaRpc('getTransaction', [entry.signature, {
+          encoding: 'jsonParsed',
+          maxSupportedTransactionVersion: 0,
+        }]);
+        return analyzeHoweyTransaction(tx, entry.signature);
+      } catch (error) {
+        console.warn('Skipping transaction while loading dashboard:', entry.signature, error);
+        return [];
+      }
+    }),
+  );
+
+  return txs.flat().slice(0, 30);
+}
+
+function renderOnChainActivity(rows) {
+  if (!rows.length) return false;
+
+  const buybacks = rows.filter((row) => row.type === 'buyback');
+  const airdrops = rows.filter((row) => row.type === 'airdrop');
+  const holderSet = new Set(airdrops.map((row) => row.recipient || row.wallet));
+
+  howeyStats.buybackInputAmount = buybacks.reduce((sum, row) => sum + row.inputAmount, 0);
+  howeyStats.buybackInputSymbol = 'USDC';
+  howeyStats.supplyBoughtBack = buybacks.reduce((sum, row) => sum + row.tokensBought, 0);
+  howeyStats.totalBuybacks = buybacks.length;
+  howeyStats.holdersAirdropped = holderSet.size || airdrops.length;
+  howeyStats.receipts = rows;
+  return true;
+}
+
 async function loadLatestReceiptPlan() {
   const planSources = [window.HOWEY_LATEST_RECEIPT_URL || './data/latest.json'];
   try {
@@ -258,7 +396,12 @@ async function loadLatestReceiptPlan() {
     if (!plan) throw new Error('No receipt plan available');
     renderEnginePlan(plan);
   } catch (error) {
-    console.warn('Using pre-launch fallback stats:', error);
+    try {
+      const rows = await loadOnChainActivity();
+      if (!renderOnChainActivity(rows)) throw new Error('No HOWEY buyback or airdrop activity found on-chain yet');
+    } catch (chainError) {
+      console.warn('Using pre-launch fallback stats:', error, chainError);
+    }
   } finally {
     renderStats();
   }
