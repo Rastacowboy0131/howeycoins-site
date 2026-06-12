@@ -79,16 +79,16 @@
           <p class="eyebrow center">HoweyLabs Terminal</p>
           <h2 class="center">Green Bag Dashboard</h2>
           <p class="center max-text dashboard-intro">
-            The live stats panel for creator fees, supply buybacks, holder drops, and the
-            every-5-minute airdrop log. The Pump.fun mint is reserved for launch prep;
-            next step is wiring the receipt engine so this becomes the public proof wall.
+            Live proof wall for the Green Bag machine: USDC in the signer wallet funds
+            buybacks, bought $HOWEYCOINS gets queued for holder drops, and receipts link
+            back to Solscan as the engine cycles.
           </p>
 
           <div class="stats-grid">
             <article class="stat-card">
-              <span>Creator Fees Collected</span>
-              <strong id="statFees">Pending launch</strong>
-              <small>SOL routed to the chaos wallet</small>
+              <span>USDC Routed To Buybacks</span>
+              <strong id="statFees">Waiting for receipt</strong>
+              <small>USDC is the buyback fuel; SOL stays for gas</small>
             </article>
             <article class="stat-card">
               <span>Supply Bought Back</span>
@@ -97,8 +97,8 @@
             </article>
             <article class="stat-card">
               <span>Total Buybacks</span>
-              <strong id="statBuybacks">Pending</strong>
-              <small>Every 5-minute machine cycles</small>
+              <strong id="statBuybacks">Live engine</strong>
+              <small>Engine checks USDC balance every cycle</small>
             </article>
             <article class="stat-card">
               <span>Holders Airdropped</span>
@@ -111,7 +111,7 @@
           <details class="drop-log" open>
             <summary>
               <span>Every 5-Min Buyback + Airdrop Receipts</span>
-              <small>Wallet, amount, and Solscan links</small>
+              <small>USDC amount, wallet, and Solscan links</small>
             </summary>
             <div class="drop-table" role="table" aria-label="Holder airdrop receipt log">
               <div class="drop-row drop-head" role="row">
@@ -414,6 +414,9 @@
       </div>
     </footer>
 
+    <script>
+      window.HOWEY_LATEST_RECEIPT_URL = window.HOWEY_LATEST_RECEIPT_URL || './data/latest.json';
+    </script>
     <script src="./app.js"></script>
   </body>
 </html>

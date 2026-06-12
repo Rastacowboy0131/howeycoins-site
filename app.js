@@ -132,6 +132,8 @@ const howeyStats = {
   // Replace these after launch with real on-chain/Pump.fun values.
   mint: 'G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump',
   creatorFeesSol: null,
+  buybackInputAmount: null,
+  buybackInputSymbol: 'USDC',
   supplyBoughtBack: null,
   totalBuybacks: null,
   holdersAirdropped: null,
@@ -156,6 +158,11 @@ function formatSol(value) {
   return `${Number(value || 0).toFixed(3)} SOL`;
 }
 
+function formatInput(value, symbol = 'USDC') {
+  const decimals = symbol === 'USDC' ? 2 : 4;
+  return `${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: decimals })} ${symbol}`;
+}
+
 function setText(id, value) {
   const el = document.getElementById(id);
   if (el) el.textContent = value;
@@ -165,7 +172,7 @@ function receiptRowsFromPlan(plan) {
   if (!plan?.airdrop?.winners?.length) return [];
   return plan.airdrop.winners.map((winner, index) => ({
     time: `${plan.runId} #${index + 1}`,
-    buyback: formatSol(plan.buyback.buybackSol),
+    buyback: formatInput(plan.buyback.inputAmount ?? plan.buyback.buybackSol, plan.buyback.inputSymbol || 'USDC'),
     wallet: shortAddress(winner.address),
     amount: formatTokens(winner.amount),
     signature: winner.signature,
@@ -181,6 +188,8 @@ function renderEnginePlan(plan) {
   const winners = plan.airdrop.winners || [];
 
   howeyStats.creatorFeesSol = claimedFeesSol;
+  howeyStats.buybackInputAmount = plan.buyback.inputAmount ?? plan.buyback.buybackSol ?? 0;
+  howeyStats.buybackInputSymbol = plan.buyback.inputSymbol || 'USDC';
   howeyStats.supplyBoughtBack = boughtBack;
   howeyStats.totalBuybacks = plan.buyback.status === 'skipped' ? 0 : 1;
   howeyStats.holdersAirdropped = winners.length;
@@ -191,7 +200,7 @@ function renderEnginePlan(plan) {
   setText('claimStatus', plan.claim.status);
   setText('claimAmount', formatSol(claimedFeesSol));
   setText('buybackRoute', plan.buyback.route || plan.buyback.status || 'route pending');
-  setText('buybackAmount', `${formatSol(plan.buyback.buybackSol || (Number(plan.buyback.inputLamports || 0) / 1_000_000_000))} → est. ${formatTokens(boughtBack)} $HOWEYCOINS`);
+  setText('buybackAmount', `${formatInput(plan.buyback.inputAmount ?? plan.buyback.buybackSol, plan.buyback.inputSymbol || 'USDC')} → est. ${formatTokens(boughtBack)} $HOWEYCOINS`);
   setText('snapshotHash', plan.snapshot?.hash ? `${plan.snapshot.hash.slice(0, 12)}...${plan.snapshot.hash.slice(-8)}` : 'snapshot pending');
   setText('eligibleCount', String(plan.snapshot?.eligibleHolderCount || 0));
   setText('excludedCount', String(plan.snapshot?.excludedWalletCount || 0));
@@ -200,7 +209,7 @@ function renderEnginePlan(plan) {
 }
 
 function renderStats() {
-  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pending' : formatSol(howeyStats.creatorFeesSol));
+  setText('statFees', howeyStats.buybackInputAmount == null ? 'Waiting' : formatInput(howeyStats.buybackInputAmount, howeyStats.buybackInputSymbol));
   setText('statSupply', howeyStats.supplyBoughtBack == null ? 'Pending' : formatTokens(howeyStats.supplyBoughtBack));
   setText('statMint', shortAddress(howeyStats.mint));
   setText('statBuybacks', howeyStats.totalBuybacks == null ? 'Pending' : String(howeyStats.totalBuybacks));
@@ -213,7 +222,7 @@ function renderStats() {
   if (!rows.length) {
     dropLog.innerHTML = `
       <div class="drop-row pending-row" role="row">
-        <span>Real buyback and holder-drop receipts will appear here after launch.</span>
+        <span>USDC buyback and holder-drop receipts will appear here as Railway publishes live receipts.</span>
       </div>
     `;
     return;
@@ -237,7 +246,7 @@ function renderStats() {
 }
 
 async function loadLatestReceiptPlan() {
-  const planSources = ['./data/latest.json'];
+  const planSources = [window.HOWEY_LATEST_RECEIPT_URL || './data/latest.json'];
   try {
     let plan = null;
     for (const source of planSources) {

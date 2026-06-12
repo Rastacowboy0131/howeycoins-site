@@ -29,7 +29,7 @@ const {
 } = require('@solana/spl-token');
 const { OnlinePumpSdk, PumpSdk, getBuyTokenAmountFromSolAmount } = require('@pump-fun/pump-sdk');
 
-const { buildAutomationConfig, shouldRunAutomation, LAMPORTS_PER_SOL } = require('../src/howeyAutoConfig');
+const { buildAutomationConfig, shouldRunAutomation, LAMPORTS_PER_SOL, WSOL_MINT } = require('../src/howeyAutoConfig');
 const { publishDropReceipt } = require('../src/howeyDropPublisher');
 const {
   addPendingAirdrop,
@@ -41,7 +41,6 @@ const {
 } = require('../src/howeyAutoState');
 const { classifyHolders, getBatchSize, snapshotHash } = require('../src/howeyEngine');
 
-const WSOL_MINT = 'So11111111111111111111111111111111111111112';
 
 function log(message, data) {
   const suffix = data === undefined ? '' : ` ${JSON.stringify(data)}`;
@@ -177,26 +176,46 @@ async function getOwnerTokenBalanceRaw(connection, owner, mint, tokenProgramId =
   }, 0);
 }
 
-async function getBuybackLamportsLeavingGas({ connection, wallet, config, state = {}, now = new Date() }) {
-  const balance = await connection.getBalance(wallet.publicKey, 'confirmed');
-  const spendable = Math.max(0, balance - config.gasReserveLamports);
-  const budgeted = Math.floor(spendable * config.buybackShare);
-  const runCapped = config.maxLamportsPerRun > 0 ? Math.min(budgeted, config.maxLamportsPerRun) : budgeted;
-  const dailyRemaining = config.maxLamportsPerDay > 0
-    ? remainingDailyLamports(state, config.maxLamportsPerDay, now)
-    : runCapped;
-  return Math.max(0, Math.min(runCapped, dailyRemaining));
+async function getOwnerTokenBalanceRawAnyProgram(connection, owner, mint) {
+  const response = await connection.getParsedTokenAccountsByOwner(owner, { mint: new PublicKey(mint) }, 'confirmed');
+  return response.value.reduce((sum, item) => {
+    const amount = Number(item.account.data.parsed?.info?.tokenAmount?.amount || 0);
+    return sum + amount;
+  }, 0);
 }
 
-async function buyBackWithJupiter({ connection, wallet, config, lamports, tokenProgramId = TOKEN_PROGRAM_ID }) {
-  if (lamports < config.minBuybackLamports) {
-    return { status: 'skipped-low-buyback', inputLamports: lamports, outputRawAmount: 0, signature: '' };
+async function getBuybackInputAmount({ connection, wallet, config, state = {}, now = new Date() }) {
+  if (config.buybackInputMint === WSOL_MINT) {
+    const balance = await connection.getBalance(wallet.publicKey, 'confirmed');
+    const spendable = Math.max(0, balance - config.gasReserveLamports);
+    const budgeted = Math.floor(spendable * config.buybackShare);
+    const runCapped = config.maxLamportsPerRun > 0 ? Math.min(budgeted, config.maxLamportsPerRun) : budgeted;
+    const dailyRemaining = config.maxLamportsPerDay > 0
+      ? remainingDailyLamports(state, config.maxLamportsPerDay, now)
+      : runCapped;
+    return Math.max(0, Math.min(runCapped, dailyRemaining));
+  }
+
+  const solBalance = await connection.getBalance(wallet.publicKey, 'confirmed');
+  if (solBalance < config.gasReserveLamports) return 0;
+
+  const tokenBalance = await getOwnerTokenBalanceRawAnyProgram(connection, wallet.publicKey, config.buybackInputMint);
+  return Math.max(0, Math.floor(tokenBalance * config.buybackShare));
+}
+
+async function getBuybackLamportsLeavingGas({ connection, wallet, config, state = {}, now = new Date() }) {
+  return getBuybackInputAmount({ connection, wallet, config: { ...config, buybackInputMint: WSOL_MINT }, state, now });
+}
+
+async function buyBackWithJupiter({ connection, wallet, config, inputAmount, tokenProgramId = TOKEN_PROGRAM_ID }) {
+  if (inputAmount < config.minBuybackInputAmount) {
+    return { status: 'skipped-low-buyback', inputAmount, outputRawAmount: 0, signature: '' };
   }
 
   const quoteUrl = new URL(`${config.jupiterQuoteApi}/quote`);
-  quoteUrl.searchParams.set('inputMint', WSOL_MINT);
+  quoteUrl.searchParams.set('inputMint', config.buybackInputMint);
   quoteUrl.searchParams.set('outputMint', config.mint);
-  quoteUrl.searchParams.set('amount', String(lamports));
+  quoteUrl.searchParams.set('amount', String(inputAmount));
   quoteUrl.searchParams.set('slippageBps', String(config.slippageBps));
   quoteUrl.searchParams.set('onlyDirectRoutes', 'false');
 
@@ -231,7 +250,11 @@ async function buyBackWithJupiter({ connection, wallet, config, lamports, tokenP
 
   return {
     status: 'bought-back',
-    inputLamports: lamports,
+    inputAmount,
+    inputLamports: config.buybackInputMint === WSOL_MINT ? inputAmount : 0,
+    inputSymbol: config.buybackInputSymbol,
+    inputMint: config.buybackInputMint,
+    inputDecimals: config.buybackInputDecimals,
     outputRawAmount: Math.max(0, after - before),
     signature,
     quoteOutAmount: Number(quote.outAmount || 0),
@@ -302,6 +325,7 @@ async function buyBackWithPump({ connection, wallet, config, lamports, tokenProg
 
   return {
     status: 'bought-back-pump',
+    inputAmount: lamports,
     inputLamports: lamports,
     outputRawAmount: Math.max(0, after - before),
     signature,
@@ -310,12 +334,16 @@ async function buyBackWithPump({ connection, wallet, config, lamports, tokenProg
   };
 }
 
-async function buyBackTokens({ connection, wallet, config, lamports, tokenProgramId = TOKEN_PROGRAM_ID }) {
+async function buyBackTokens({ connection, wallet, config, inputAmount, tokenProgramId = TOKEN_PROGRAM_ID }) {
+  if (config.buybackInputMint !== WSOL_MINT) {
+    return buyBackWithJupiter({ connection, wallet, config, inputAmount, tokenProgramId });
+  }
+
   try {
-    return await buyBackWithJupiter({ connection, wallet, config, lamports, tokenProgramId });
+    return await buyBackWithJupiter({ connection, wallet, config, inputAmount, tokenProgramId });
   } catch (error) {
     log('jupiter-buyback-fallback', { reason: error.message.slice(0, 180) });
-    return buyBackWithPump({ connection, wallet, config, lamports, tokenProgramId });
+    return buyBackWithPump({ connection, wallet, config, lamports: inputAmount, tokenProgramId });
   }
 }
 
@@ -366,6 +394,10 @@ function writeState(config, state) {
   fs.writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`);
 }
 
+function formatInputAmount(rawAmount, decimals) {
+  return Number(rawAmount || 0) / (10 ** Number(decimals || 0));
+}
+
 async function runOnce({ connection, wallet, config }) {
   const started = new Date();
   const runId = makeRunId(started);
@@ -378,23 +410,26 @@ async function runOnce({ connection, wallet, config }) {
   const claim = await claimCreatorFees({ connection, wallet, config });
   log('claim-result', { status: claim.status, claimableSol: lamportsToSol(claim.claimableLamports), signature: claim.signature });
 
-  const buybackLamports = await getBuybackLamportsLeavingGas({ connection, wallet, config, state, now: started });
-  let buyback = { status: 'skipped', inputLamports: buybackLamports, signature: '', outputRawAmount: 0 };
+  const buybackInputAmount = await getBuybackInputAmount({ connection, wallet, config, state, now: started });
+  let buyback = { status: 'skipped', inputAmount: buybackInputAmount, inputLamports: 0, inputSymbol: config.buybackInputSymbol, inputMint: config.buybackInputMint, inputDecimals: config.buybackInputDecimals, signature: '', outputRawAmount: 0 };
 
-  if (buybackLamports >= config.minBuybackLamports) {
-    buyback = await buyBackTokens({ connection, wallet, config, lamports: buybackLamports, tokenProgramId });
+  if (buybackInputAmount >= config.minBuybackInputAmount) {
+    buyback = await buyBackTokens({ connection, wallet, config, inputAmount: buybackInputAmount, tokenProgramId });
     state = addPendingAirdrop(state, buyback.outputRawAmount || 0);
-    state = applyDailySpend(state, buyback.inputLamports || 0, started);
+    state = applyDailySpend(state, buyback.inputAmount || 0, started);
     log('buyback-result', {
       status: buyback.status,
-      inputSol: lamportsToSol(buyback.inputLamports),
+      inputAmount: formatInputAmount(buyback.inputAmount, config.buybackInputDecimals),
+      inputSymbol: config.buybackInputSymbol,
+      inputMint: config.buybackInputMint,
       outputRawAmount: buyback.outputRawAmount,
       signature: buyback.signature,
     });
   } else {
     log('buyback-skipped', {
-      reason: 'below-min-or-gas-reserve',
-      spendableSol: lamportsToSol(buybackLamports),
+      reason: 'below-min-input-or-gas-reserve',
+      spendableInputAmount: formatInputAmount(buybackInputAmount, config.buybackInputDecimals),
+      inputSymbol: config.buybackInputSymbol,
       gasReserveSol: config.gasReserveSol,
     });
   }
@@ -455,10 +490,14 @@ async function runOnce({ connection, wallet, config }) {
     claim: { status: claim.status, claimedFeesSol: lamportsToSol(claim.claimableLamports), claimTx: claim.signature },
     buyback: {
       status: buyback.status,
-      buybackSol: lamportsToSol(buyback.inputLamports),
+      buybackSol: lamportsToSol(buyback.inputLamports || 0),
+      inputAmount: formatInputAmount(buyback.inputAmount || 0, config.buybackInputDecimals),
+      inputRawAmount: buyback.inputAmount || 0,
+      inputSymbol: config.buybackInputSymbol,
+      inputMint: config.buybackInputMint,
       estimatedTokensBought: buyback.outputRawAmount,
       swapTx: buyback.signature,
-      route: buyback.signature ? 'Jupiter quote/swap; verify routePlan for PumpSwap liquidity' : '',
+      route: buyback.signature ? 'Jupiter quote/swap; USDC-funded buyback route' : '',
     },
     snapshot,
     airdrop,
@@ -527,5 +566,6 @@ module.exports = {
   fetchHolders,
   getTokenProgramIdForMint,
   getBuybackLamportsLeavingGas,
+  getBuybackInputAmount,
   runOnce,
 };

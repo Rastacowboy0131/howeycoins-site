@@ -1,4 +1,6 @@
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const WSOL_MINT = 'So11111111111111111111111111111111111111112';
 
 function parseBool(value) {
   return String(value || '').trim().toLowerCase() === 'true';
@@ -13,6 +15,12 @@ function toLamports(sol) {
   const value = Number(sol || 0);
   if (!Number.isFinite(value) || value <= 0) return 0;
   return Math.floor(value * LAMPORTS_PER_SOL);
+}
+
+function toTokenUnits(amount, decimals) {
+  const value = Number(amount || 0);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.floor(value * (10 ** decimals));
 }
 
 function parseAddressList(value) {
@@ -38,6 +46,9 @@ function buildAutomationConfig(env = process.env) {
   const devPublicKey = env.DEV_PUBLIC_KEY || env.OPS_PUBLIC_KEY || 'Ehr92fYMp2DmzavJCCY4wfGnYLasucDPBnodqjL2agWz';
   const opsPublicKey = env.OPS_PUBLIC_KEY || devPublicKey;
   const airdropPublicKey = env.AIRDROP_PUBLIC_KEY || opsPublicKey;
+  const buybackInputMint = env.BUYBACK_INPUT_MINT || USDC_MINT;
+  const buybackInputDecimals = Math.trunc(parseNumber(env.BUYBACK_INPUT_DECIMALS, buybackInputMint === WSOL_MINT ? 9 : 6));
+  const buybackInputSymbol = env.BUYBACK_INPUT_SYMBOL || (buybackInputMint === USDC_MINT ? 'USDC' : buybackInputMint === WSOL_MINT ? 'SOL' : 'INPUT');
   const lpPoolWallets = parseAddressList(env.LP_POOL_WALLETS || env.POOL_WALLETS || '');
   const manuallyExcluded = parseAddressList(env.EXCLUDED_WALLETS || '');
   const excludedWallets = unique([
@@ -52,6 +63,9 @@ function buildAutomationConfig(env = process.env) {
     rpcUrl: env.RPC_URL || env.HELIUS_RPC_URL || '',
     privateKey: env.PRIVATE_KEY || '',
     mint: env.HOWEYCOINS_MINT || 'G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump',
+    buybackInputMint,
+    buybackInputDecimals,
+    buybackInputSymbol,
     devPublicKey,
     opsPublicKey,
     airdropPublicKey,
@@ -64,6 +78,10 @@ function buildAutomationConfig(env = process.env) {
     airdropIntervalMs: Math.max(60_000, parseNumber(env.AIRDROP_INTERVAL_MS, 300_000)),
     minClaimLamports: toLamports(env.MIN_CLAIM_SOL || '0.01'),
     minBuybackLamports: toLamports(env.MIN_BUYBACK_SOL || env.MIN_CLAIM_SOL || '0.01'),
+    minBuybackInputAmount: toTokenUnits(
+      env.MIN_BUYBACK_INPUT_AMOUNT || env.MIN_BUYBACK_USDC || (buybackInputMint === WSOL_MINT ? env.MIN_BUYBACK_SOL || '0.01' : '0.01'),
+      buybackInputDecimals,
+    ),
     gasReserveSol: parseNumber(env.GAS_RESERVE_SOL, 0.1),
     gasReserveLamports: toLamports(env.GAS_RESERVE_SOL || '0.1'),
     maxSolPerRun: parseNumber(env.MAX_SOL_PER_RUN, 0),
@@ -113,8 +131,11 @@ function shouldRunAutomation(config) {
 
 module.exports = {
   LAMPORTS_PER_SOL,
+  USDC_MINT,
+  WSOL_MINT,
   buildAutomationConfig,
   parseAddressList,
   shouldRunAutomation,
   toLamports,
+  toTokenUnits,
 };

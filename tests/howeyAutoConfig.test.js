@@ -84,6 +84,15 @@ test('buildAutomationConfig keeps X posting disabled by default and reads social
   assert.equal(enabled.xAccessTokenSecret, 'token-secret');
 });
 
+test('buildAutomationConfig defaults to USDC-funded buybacks', () => {
+  const config = buildAutomationConfig({});
+
+  assert.equal(config.buybackInputSymbol, 'USDC');
+  assert.equal(config.buybackInputDecimals, 6);
+  assert.equal(config.buybackInputMint, 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+  assert.equal(config.minBuybackInputAmount, 10_000);
+});
+
 test('toLamports converts SOL strings into integer lamports', () => {
   assert.equal(toLamports('0.25'), 250_000_000);
   assert.equal(toLamports('1'), 1_000_000_000);
