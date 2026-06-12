@@ -133,34 +133,10 @@ const howeyStats = {
   mint: 'G3Q6iQ4xMG3vH9SyKSkupvEeeKiRLvvmCqAQ9iyGpump',
   creatorFeesSol: null,
   supplyBoughtBack: null,
-  totalBuybacks: 0,
-  holdersAirdropped: 0,
+  totalBuybacks: null,
+  holdersAirdropped: null,
   receipts: [],
 };
-
-const demoReceipts = [
-  {
-    time: 'Launch + 05m',
-    buyback: 'pending',
-    wallet: '7H0w...eyC0',
-    amount: 'pending',
-    signature: '',
-  },
-  {
-    time: 'Launch + 10m',
-    buyback: 'pending',
-    wallet: 'Gr33...Bag',
-    amount: 'pending',
-    signature: '',
-  },
-  {
-    time: 'Launch + 15m',
-    buyback: 'pending',
-    wallet: 'SECn...ope',
-    amount: 'pending',
-    signature: '',
-  },
-];
 
 function solscanLink(signatureOrAddress) {
   if (!signatureOrAddress) return '#';
@@ -224,16 +200,25 @@ function renderEnginePlan(plan) {
 }
 
 function renderStats() {
-  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pre-launch' : formatSol(howeyStats.creatorFeesSol));
-  setText('statSupply', howeyStats.supplyBoughtBack == null ? 'Pre-launch' : formatTokens(howeyStats.supplyBoughtBack));
+  setText('statFees', howeyStats.creatorFeesSol == null ? 'Pending' : formatSol(howeyStats.creatorFeesSol));
+  setText('statSupply', howeyStats.supplyBoughtBack == null ? 'Pending' : formatTokens(howeyStats.supplyBoughtBack));
   setText('statMint', shortAddress(howeyStats.mint));
-  setText('statBuybacks', String(howeyStats.totalBuybacks));
-  setText('statHolders', String(howeyStats.holdersAirdropped));
+  setText('statBuybacks', howeyStats.totalBuybacks == null ? 'Pending' : String(howeyStats.totalBuybacks));
+  setText('statHolders', howeyStats.holdersAirdropped == null ? 'Pending' : String(howeyStats.holdersAirdropped));
 
   const dropLog = document.getElementById('dropLog');
   if (!dropLog) return;
 
-  const rows = howeyStats.receipts.length ? howeyStats.receipts : demoReceipts;
+  const rows = howeyStats.receipts;
+  if (!rows.length) {
+    dropLog.innerHTML = `
+      <div class="drop-row pending-row" role="row">
+        <span>Real buyback and holder-drop receipts will appear here after launch.</span>
+      </div>
+    `;
+    return;
+  }
+
   dropLog.innerHTML = rows.map((row) => {
     const receipt = row.signature
       ? `<a href="${solscanLink(row.signature)}" target="_blank" rel="noreferrer">Solscan</a>`
@@ -251,8 +236,8 @@ function renderStats() {
   }).join('');
 }
 
-async function loadDemoPlan() {
-  const planSources = ['./data/latest.json', './data/howey-run-demo.json'];
+async function loadLatestReceiptPlan() {
+  const planSources = ['./data/latest.json'];
   try {
     let plan = null;
     for (const source of planSources) {
@@ -270,4 +255,4 @@ async function loadDemoPlan() {
   }
 }
 
-loadDemoPlan();
+loadLatestReceiptPlan();
