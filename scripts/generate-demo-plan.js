@@ -40,7 +40,7 @@ const plan = planHoweyRun({
   seed: 'howeycoins-public-demo',
 });
 
-const outputDir = path.join(__dirname, '..', 'data');
+const outputDir = path.join(__dirname, '..', 'fixtures');
 fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(path.join(outputDir, 'howey-run-demo.json'), `${JSON.stringify(plan, null, 2)}\n`);
 console.log(`Wrote ${path.join(outputDir, 'howey-run-demo.json')}`);
