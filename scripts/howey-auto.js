@@ -20,6 +20,7 @@ const {
 } = require('@solana/web3.js');
 const {
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createTransferInstruction,
@@ -85,14 +86,35 @@ async function getMintSupply(connection, mint) {
   return Number(supply.value.amount);
 }
 
-async function fetchHolders(connection, mint) {
+async function getTokenProgramIdForMint(connection, mint) {
   const mintKey = new PublicKey(mint);
-  const accounts = await connection.getParsedProgramAccounts(TOKEN_PROGRAM_ID, {
+  const account = await connection.getAccountInfo(mintKey, 'confirmed');
+  if (!account) throw new Error(`Mint account not found: ${mintKey.toBase58()}`);
+
+  if (account.owner.equals(TOKEN_PROGRAM_ID) || account.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+    return account.owner;
+  }
+
+  throw new Error(`Unsupported token program for ${mintKey.toBase58()}: ${account.owner.toBase58()}`);
+}
+
+function buildHolderAccountFilters(mint, tokenProgramId = TOKEN_PROGRAM_ID) {
+  const mintKey = new PublicKey(mint);
+  const filters = [{ memcmp: { offset: 0, bytes: mintKey.toBase58() } }];
+
+  // Legacy SPL token accounts are fixed at 165 bytes. Token-2022 accounts may
+  // include extensions and can be larger, so a dataSize filter hides real holders.
+  if (tokenProgramId.equals(TOKEN_PROGRAM_ID)) {
+    filters.unshift({ dataSize: 165 });
+  }
+
+  return filters;
+}
+
+async function fetchHolders(connection, mint, tokenProgramId = TOKEN_PROGRAM_ID) {
+  const accounts = await connection.getParsedProgramAccounts(tokenProgramId, {
     commitment: 'confirmed',
-    filters: [
-      { dataSize: 165 },
-      { memcmp: { offset: 0, bytes: mintKey.toBase58() } },
-    ],
+    filters: buildHolderAccountFilters(mint, tokenProgramId),
   });
 
   const balances = new Map();
@@ -144,8 +166,8 @@ function allocateAirdrops(winners, totalRawAmount) {
   });
 }
 
-async function getOwnerTokenBalanceRaw(connection, owner, mint) {
-  const response = await connection.getParsedTokenAccountsByOwner(owner, { mint: new PublicKey(mint) }, 'confirmed');
+async function getOwnerTokenBalanceRaw(connection, owner, mint, tokenProgramId = TOKEN_PROGRAM_ID) {
+  const response = await connection.getParsedTokenAccountsByOwner(owner, { mint: new PublicKey(mint), programId: tokenProgramId }, 'confirmed');
   return response.value.reduce((sum, item) => {
     const amount = Number(item.account.data.parsed?.info?.tokenAmount?.amount || 0);
     return sum + amount;
@@ -158,7 +180,7 @@ async function getBuybackLamportsLeavingGas({ connection, wallet, config }) {
   return Math.floor(spendable * config.buybackShare);
 }
 
-async function buyBackWithJupiter({ connection, wallet, config, lamports }) {
+async function buyBackWithJupiter({ connection, wallet, config, lamports, tokenProgramId = TOKEN_PROGRAM_ID }) {
   if (lamports < config.minBuybackLamports) {
     return { status: 'skipped-low-buyback', inputLamports: lamports, outputRawAmount: 0, signature: '' };
   }
@@ -194,10 +216,10 @@ async function buyBackWithJupiter({ connection, wallet, config, lamports }) {
   const tx = VersionedTransaction.deserialize(Buffer.from(swap.swapTransaction, 'base64'));
   tx.sign([wallet]);
 
-  const before = await getOwnerTokenBalanceRaw(connection, wallet.publicKey, config.mint);
+  const before = await getOwnerTokenBalanceRaw(connection, wallet.publicKey, config.mint, tokenProgramId);
   const signature = await connection.sendRawTransaction(tx.serialize(), { skipPreflight: false, maxRetries: 3 });
   await connection.confirmTransaction(signature, 'confirmed');
-  const after = await getOwnerTokenBalanceRaw(connection, wallet.publicKey, config.mint);
+  const after = await getOwnerTokenBalanceRaw(connection, wallet.publicKey, config.mint, tokenProgramId);
 
   return {
     status: 'bought-back',
@@ -209,20 +231,20 @@ async function buyBackWithJupiter({ connection, wallet, config, lamports }) {
   };
 }
 
-async function sendAirdrops({ connection, wallet, config, winners }) {
+async function sendAirdrops({ connection, wallet, config, winners, tokenProgramId = TOKEN_PROGRAM_ID }) {
   const mint = new PublicKey(config.mint);
-  const sourceAta = getAssociatedTokenAddressSync(mint, wallet.publicKey, false, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+  const sourceAta = getAssociatedTokenAddressSync(mint, wallet.publicKey, false, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
   const receipts = [];
 
   for (const winner of winners) {
     const recipient = new PublicKey(winner.address);
-    const destinationAta = getAssociatedTokenAddressSync(mint, recipient, true, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+    const destinationAta = getAssociatedTokenAddressSync(mint, recipient, true, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID);
     const tx = new Transaction();
     const destinationInfo = await connection.getAccountInfo(destinationAta, 'confirmed');
     if (!destinationInfo) {
-      tx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, destinationAta, recipient, mint, TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID));
+      tx.add(createAssociatedTokenAccountInstruction(wallet.publicKey, destinationAta, recipient, mint, tokenProgramId, ASSOCIATED_TOKEN_PROGRAM_ID));
     }
-    tx.add(createTransferInstruction(sourceAta, destinationAta, wallet.publicKey, BigInt(winner.amount), [], TOKEN_PROGRAM_ID));
+    tx.add(createTransferInstruction(sourceAta, destinationAta, wallet.publicKey, BigInt(winner.amount), [], tokenProgramId));
     const signature = await sendAndConfirmTransaction(connection, tx, [wallet], { commitment: 'confirmed' });
     receipts.push({ ...winner, signature, receiptStatus: 'sent' });
   }
@@ -260,6 +282,8 @@ async function runOnce({ connection, wallet, config }) {
   const started = new Date();
   const runId = makeRunId(started);
   log('run-start', { runId, wallet: wallet.publicKey.toBase58(), mint: config.mint });
+  const tokenProgramId = await getTokenProgramIdForMint(connection, config.mint);
+  log('token-program', { mint: config.mint, tokenProgramId: tokenProgramId.toBase58() });
 
   let state = normalizeState(readState(config));
 
@@ -270,7 +294,7 @@ async function runOnce({ connection, wallet, config }) {
   let buyback = { status: 'skipped', inputLamports: buybackLamports, signature: '', outputRawAmount: 0 };
 
   if (buybackLamports >= config.minBuybackLamports) {
-    buyback = await buyBackWithJupiter({ connection, wallet, config, lamports: buybackLamports });
+    buyback = await buyBackWithJupiter({ connection, wallet, config, lamports: buybackLamports, tokenProgramId });
     state = addPendingAirdrop(state, buyback.outputRawAmount || 0);
     log('buyback-result', {
       status: buyback.status,
@@ -297,7 +321,7 @@ async function runOnce({ connection, wallet, config }) {
 
   if (state.pendingAirdropRawAmount > 0 && isAirdropDue(state, config.airdropIntervalMs, started)) {
     const [holders, totalSupply] = await Promise.all([
-      fetchHolders(connection, config.mint),
+      fetchHolders(connection, config.mint, tokenProgramId),
       getMintSupply(connection, config.mint),
     ]);
     const holderConfig = { totalSupply, maxWalletShare: config.maxWalletShare, excludedWallets: config.excludedWallets };
@@ -305,7 +329,7 @@ async function runOnce({ connection, wallet, config }) {
     const batchSize = getBatchSize(classified.eligible.length);
     const winners = pickWeightedWinners(classified.eligible, batchSize, `${runId}|${buyback.signature}|${state.pendingAirdropRawAmount}`);
     const plannedAirdrops = allocateAirdrops(winners, state.pendingAirdropRawAmount);
-    const sentAirdrops = await sendAirdrops({ connection, wallet, config, winners: plannedAirdrops });
+    const sentAirdrops = await sendAirdrops({ connection, wallet, config, winners: plannedAirdrops, tokenProgramId });
 
     snapshot = {
       hash: snapshotHash(holders, config.mint),
@@ -410,7 +434,9 @@ if (require.main === module) {
 
 module.exports = {
   allocateAirdrops,
+  buildHolderAccountFilters,
   fetchHolders,
+  getTokenProgramIdForMint,
   getBuybackLamportsLeavingGas,
   runOnce,
 };
