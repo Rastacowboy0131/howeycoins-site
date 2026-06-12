@@ -10,6 +10,7 @@ if (fs.existsSync(fallbackClaimEnv)) {
 }
 
 const bs58 = require('bs58').default;
+const BN = require('bn.js');
 const {
   Connection,
   Keypair,
@@ -26,15 +27,17 @@ const {
   createTransferInstruction,
   getAssociatedTokenAddressSync,
 } = require('@solana/spl-token');
-const { OnlinePumpSdk } = require('@pump-fun/pump-sdk');
+const { OnlinePumpSdk, PumpSdk, getBuyTokenAmountFromSolAmount } = require('@pump-fun/pump-sdk');
 
 const { buildAutomationConfig, shouldRunAutomation, LAMPORTS_PER_SOL } = require('../src/howeyAutoConfig');
 const { publishDropReceipt } = require('../src/howeyDropPublisher');
 const {
   addPendingAirdrop,
+  applyDailySpend,
   isAirdropDue,
   markAirdropSent,
   normalizeState,
+  remainingDailyLamports,
 } = require('../src/howeyAutoState');
 const { classifyHolders, getBatchSize, snapshotHash } = require('../src/howeyEngine');
 
@@ -174,10 +177,15 @@ async function getOwnerTokenBalanceRaw(connection, owner, mint, tokenProgramId =
   }, 0);
 }
 
-async function getBuybackLamportsLeavingGas({ connection, wallet, config }) {
+async function getBuybackLamportsLeavingGas({ connection, wallet, config, state = {}, now = new Date() }) {
   const balance = await connection.getBalance(wallet.publicKey, 'confirmed');
   const spendable = Math.max(0, balance - config.gasReserveLamports);
-  return Math.floor(spendable * config.buybackShare);
+  const budgeted = Math.floor(spendable * config.buybackShare);
+  const runCapped = config.maxLamportsPerRun > 0 ? Math.min(budgeted, config.maxLamportsPerRun) : budgeted;
+  const dailyRemaining = config.maxLamportsPerDay > 0
+    ? remainingDailyLamports(state, config.maxLamportsPerDay, now)
+    : runCapped;
+  return Math.max(0, Math.min(runCapped, dailyRemaining));
 }
 
 async function buyBackWithJupiter({ connection, wallet, config, lamports, tokenProgramId = TOKEN_PROGRAM_ID }) {
@@ -229,6 +237,86 @@ async function buyBackWithJupiter({ connection, wallet, config, lamports, tokenP
     quoteOutAmount: Number(quote.outAmount || 0),
     routePlan: quote.routePlan || [],
   };
+}
+
+async function buyBackWithPump({ connection, wallet, config, lamports, tokenProgramId = TOKEN_PROGRAM_ID }) {
+  if (lamports < config.minBuybackLamports) {
+    return { status: 'skipped-low-buyback', inputLamports: lamports, outputRawAmount: 0, signature: '' };
+  }
+
+  const mint = new PublicKey(config.mint);
+  const online = new OnlinePumpSdk(connection);
+  const pump = new PumpSdk();
+  const global = await online.fetchGlobal();
+  const feeConfig = await online.fetchFeeConfig();
+  const { bondingCurveAccountInfo, bondingCurve, associatedUserAccountInfo } = await online.fetchBuyState(mint, wallet.publicKey, tokenProgramId);
+  if (bondingCurve.complete) {
+    return { status: 'skipped-pump-curve-complete', inputLamports: lamports, outputRawAmount: 0, signature: '' };
+  }
+
+  const mintSupply = new BN(String(await getMintSupply(connection, config.mint)));
+  const quoteAmount = new BN(String(lamports));
+  const amount = getBuyTokenAmountFromSolAmount({
+    global,
+    feeConfig,
+    mintSupply,
+    bondingCurve,
+    amount: quoteAmount,
+    quoteMint: bondingCurve.quoteMint,
+  });
+  if (amount.lte(new BN(0))) {
+    return { status: 'skipped-pump-zero-output', inputLamports: lamports, outputRawAmount: 0, signature: '' };
+  }
+
+  const slippage = config.slippageBps / 100;
+  const instructions = tokenProgramId.equals(TOKEN_2022_PROGRAM_ID)
+    ? await pump.buyV2Instructions({
+      global,
+      bondingCurveAccountInfo,
+      bondingCurve,
+      associatedUserAccountInfo,
+      mint,
+      user: wallet.publicKey,
+      amount,
+      quoteAmount,
+      slippage,
+      tokenProgram: tokenProgramId,
+    })
+    : await pump.buyInstructions({
+      global,
+      bondingCurveAccountInfo,
+      bondingCurve,
+      associatedUserAccountInfo,
+      mint,
+      user: wallet.publicKey,
+      amount,
+      solAmount: quoteAmount,
+      slippage,
+      tokenProgram: tokenProgramId,
+    });
+
+  const before = await getOwnerTokenBalanceRaw(connection, wallet.publicKey, config.mint, tokenProgramId);
+  const tx = new Transaction().add(...instructions);
+  const signature = await sendAndConfirmTransaction(connection, tx, [wallet], { commitment: 'confirmed' });
+  const after = await getOwnerTokenBalanceRaw(connection, wallet.publicKey, config.mint, tokenProgramId);
+
+  return {
+    status: 'bought-back-pump',
+    inputLamports: lamports,
+    outputRawAmount: Math.max(0, after - before),
+    signature,
+    quoteOutAmount: Number(amount.toString()),
+    routePlan: [{ swapInfo: { label: 'Pump.fun bonding curve' } }],
+  };
+}
+
+async function buyBackTokens({ connection, wallet, config, lamports, tokenProgramId = TOKEN_PROGRAM_ID }) {
+  try {
+    return await buyBackWithJupiter({ connection, wallet, config, lamports, tokenProgramId });
+  } catch (error) {
+    log('jupiter-buyback-fallback', { reason: error.message.slice(0, 180) });
+    return buyBackWithPump({ connection, wallet, config, lamports, tokenProgramId });
+  }
 }
 
 async function sendAirdrops({ connection, wallet, config, winners, tokenProgramId = TOKEN_PROGRAM_ID }) {
@@ -290,12 +378,13 @@ async function runOnce({ connection, wallet, config }) {
   const claim = await claimCreatorFees({ connection, wallet, config });
   log('claim-result', { status: claim.status, claimableSol: lamportsToSol(claim.claimableLamports), signature: claim.signature });
 
-  const buybackLamports = await getBuybackLamportsLeavingGas({ connection, wallet, config });
+  const buybackLamports = await getBuybackLamportsLeavingGas({ connection, wallet, config, state, now: started });
   let buyback = { status: 'skipped', inputLamports: buybackLamports, signature: '', outputRawAmount: 0 };
 
   if (buybackLamports >= config.minBuybackLamports) {
-    buyback = await buyBackWithJupiter({ connection, wallet, config, lamports: buybackLamports, tokenProgramId });
+    buyback = await buyBackTokens({ connection, wallet, config, lamports: buybackLamports, tokenProgramId });
     state = addPendingAirdrop(state, buyback.outputRawAmount || 0);
+    state = applyDailySpend(state, buyback.inputLamports || 0, started);
     log('buyback-result', {
       status: buyback.status,
       inputSol: lamportsToSol(buyback.inputLamports),
